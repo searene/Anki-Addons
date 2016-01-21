@@ -48,10 +48,10 @@ PurgeAttributes is used to purge the `font-size` attribute originally. But you c
 ### Effects
 It will purge the four attributes by default:
 
-* 'font-family',
-* 'font-size',
-* 'background-color',
-* 'line-height',
+* font-family
+* font-size
+* background-color
+* line-height
 
 If you are running Anki with a high-resolution like me, and you didn't strip the html when pasting like me, you may encounter something like this:
 
