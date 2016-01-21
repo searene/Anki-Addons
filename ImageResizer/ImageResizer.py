@@ -25,7 +25,7 @@ class Setup(object):
     config = dict(
         auto = True,
         keys = dict(Ctrl = True, Alt = False, 
-                Shift = True, Extra = 'B'),
+                Shift = True, Extra = 'V'),
         width = '500',
         height = '300',
         ratioKeep = 'width'
