@@ -45,7 +45,7 @@ You can also set the width or height of the resized image. Select `scale to widt
 ### Introduction
 PurgeAttributes is used to purge the `font-size` attribute originally. But you can purge any attribute defined in something like `style='font-size: 100px; color: red'`.
 
-### effects
+### Effects
 It will purge the four attributes by default:
 
 * 'font-family',
