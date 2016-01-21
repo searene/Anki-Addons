@@ -11,6 +11,14 @@ It contains the following addons till now:
 
 ImageResizer is a simple anki addon used to resize the image stored in the clipboard. So images that are too big or too small to be used in reviewing are not a problem any more.
 
+##### Before resizing
+
+![Before resizing](http://i.imgur.com/54kbvhl.jpg)
+
+##### After resizing
+
+![After resizing](http://i.imgur.com/hQ1zeMU.png)
+
 ### Usage
 
 Normally after you installed this addon, Images will be automatically resized if you paste images when adding new cards, either by hitting `Ctrl + V` or `Ctrl + Shift + V` or click on the button on the toolbar.
@@ -28,7 +36,7 @@ The `Settings` window will pop up.
 
 Check `Automatically resize the image when pasting` if you want to paste the resized image when using `Ctrl+V`. Anki will paste the original-sized image if you uncheck it.
 
-The `Key Combination` is the shortcut to paste the resized. It's just like `Ctrl+V`, the only difference is that you will always get the resized the image if you use the shortcut to paste. You can modify the shortcut by hitting the button `Grab the Key combination` on the right. **Notice that the shortcut you specified may not work, try and find a workable one.**
+The `Key Combination` is the shortcut to paste the resized image. It's just like `Ctrl+V`, the only difference is that you will always get the resized the image if you use the shortcut to paste. You can modify the shortcut by hitting the button `Grab the Key combination` on the right. **Notice that the shortcut you specified may not work, try and find a workable one.**
 
 You can also set the width or height of the resized image. Select `scale to width and keep ratio`, it will resize the image according to the width you specified, and the height value here will be ignored. The same goes to `scale to height and keep ratio`. Notice that it will always keep the original image's ratio, either by width or height.
 
@@ -39,3 +47,4 @@ Issues and requests to improve the addon are always welcomed.
 ### License
 
 MIT
+
