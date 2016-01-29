@@ -45,6 +45,9 @@ You can also set the width or height of the resized image. Select `scale to widt
 ### Introduction
 PurgeAttributes is used to purge the `font-size` attribute originally. But you can purge any attribute defined in something like `style='font-size: 100px; color: red'`.
 
+### Usage
+Put all the files under `PurgeAttributes`(including `PurgeAttributes.py` and `PurgeAttribues` folder which contains `bs4`) into your Anki add-ons folder.
+
 ### Effects
 It will purge the four attributes by default:
 
@@ -63,9 +66,12 @@ If you use the addon, it will remove the yellow background and remove the `font-
 
 Now it's not hard to see, right?
 
-### configuration
+### Configuration
 
 To choose which attribute you need to remove, edit the `purgeAttributes.py` file from menu `Tools --> Add-ons --> PurgeAttributes --> Edit`, and modify the variable `REMOVE_ATTRIBUTES` at will.
+
+### Notice
+As I tested it, the addon was ridiculously slow on Windows XP, yet it was quite fast on ubuntu. Haven't found a solution because I use Linux 99% of the time. If you have a solution here, please pull a request to fix it.
 
 # Issues
 

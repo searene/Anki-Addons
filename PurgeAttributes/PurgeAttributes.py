@@ -4,7 +4,9 @@
 from anki.hooks import wrap
 from aqt.editor import Editor, EditorWebView
 
-from bs4 import BeautifulSoup
+import os
+import sys
+from BeautifulSoup import BeautifulSoup
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -16,26 +18,30 @@ REMOVE_ATTRIBUTES = [
         'line-height',
 ]
 
-def setMinimalFont(self, mime, _old):
+def purgeAttributes(self, mime, _old):
     html = mime.html()
-    soup = BeautifulSoup(html, 'html.parser')
+    soup = BeautifulSoup(html)
     newMime = QMimeData()
     for tag in soup.recursiveChildGenerator():
         # remove attributes in the list
+        index = -1
         try:
-            for key, value in tag.attrs.items():
+            for key, value in tag.attrs:
+                index += 1
+                if key != 'style':
+                    continue
                 new = value.split(';')
                 new = ';'.join([s for s in new
                     if s.split(':')[0].strip() not in REMOVE_ATTRIBUTES])
-                tag.attrs[key] = new
+                tag.attrs[index] = (u'style', new)
         except AttributeError: 
             # 'NavigableString' object has no attribute 'attrs'
             pass
 
     # assign the modified html to new Mime
-    newMime.setHtml(soup.prettify())
+    newMime.setHtml(str(soup).decode('utf8'))
 
     # default _processHtml method
     return _old(self, newMime)
 
-EditorWebView._processHtml = wrap(EditorWebView._processHtml, setMinimalFont, 'around')
+EditorWebView._processHtml = wrap(EditorWebView._processHtml, purgeAttributes, 'around')
