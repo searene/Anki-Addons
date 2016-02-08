@@ -12,10 +12,8 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 REMOVE_ATTRIBUTES = [
-        'font-family',
-        'font-size',
+        'color',
         'background-color',
-        'line-height',
 ]
 
 def purgeAttributes(self, mime, _old):

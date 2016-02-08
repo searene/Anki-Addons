@@ -11,7 +11,24 @@ from PyQt4.QtCore import *
 
 import os
 import pickle
+import logging
+import copy
+import shutil
 
+
+# Get log file
+irFolder = os.path.join(mw.pm.addonFolder(), 'ImageResizer')
+logFile = os.path.join(irFolder, 'imageResizer.log')
+
+# if ImageResizer's folder doesn't exist, create one
+if not os.path.exists(irFolder):
+    os.makedirs(irFolder)
+# create the logFile
+open(logFile, 'a').close()
+
+# setup logger
+logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s', filename = logFile, level = logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # settings main window, Qt won't show the window if
 # we don't assign a global variable to Settings()
@@ -26,15 +43,26 @@ class Setup(object):
         auto = True,
         keys = dict(Ctrl = True, Alt = False, 
                 Shift = True, Extra = 'V'),
-        width = '500',
-        height = '300',
-        ratioKeep = 'width'
+        width = '1000',
+        height = '1000',
+        ratioKeep = 'height'
     )
+
+    defaultConfig = copy.deepcopy(config)
 
     settingsMw = None
     addonDir = mw.pm.addonFolder()
+
+    logger.debug("Get addon Dir {}".format(addonDir))
+
     irFolder = os.path.join(addonDir, 'ImageResizer')
+
+    logger.debug("ImageResizer's config folder: {}".format(irFolder))
+
     pickleFile = os.path.join(irFolder, 'config.pickle')
+
+    logger.debug("pickleFile: {}".format(pickleFile))
+
     isPasting = False
 
     def __init__(self, imageResizer):
@@ -42,20 +70,26 @@ class Setup(object):
         self.setupMenu()
         self.setupFunctions(imageResizer)
 
+        logger.debug('Setup init completed')
+
     def checkConfigAndLoad(self):
         """Check if the ImageResizer folder exists
            Create one if not, then load the configuration
         """
-        if not os.path.exists(self.irFolder):
-            os.makedirs(self.irFolder)
-        if not os.path.exists(self.pickleFile):
+        if not os.path.exists(Setup.irFolder):
+            logger.debug("config folder doesn't exist, creating a new one...")
+            os.makedirs(Setup.irFolder)
+        if not os.path.exists(Setup.pickleFile):
             # dump the default config if config.pickle doesn't exist
-            with open(self.pickleFile, 'wb') as f:
+            logger.debug("config.pickle doesn't exist, creating one with the default settings: {}".format(Setup.defaultConfig))
+            with open(Setup.pickleFile, 'wb') as f:
                 pickle.dump(Setup.config, f)
 
         # load config.pickle
+        logger.debug("loading config.pickle...")
         with open(self.pickleFile, 'rb') as f:
             Setup.config = pickle.load(f)
+            logger.debug("loaded config: {}".format(Setup.config))
 
     def setupMenu(self):
         """
@@ -80,7 +114,7 @@ class Setup(object):
         """
         Show the settings dialog if the user clicked on the menu
         """
-        self.settingsMw = Settings(Setup.config)
+        self.settingsMw = Settings(self, Setup.config)
 
 def resize(mime):
     """Resize the image
@@ -89,19 +123,25 @@ def resize(mime):
     :returns: resized QImage
 
     """
+    logger.debug('resizing images...')
     im = QImage(mime.imageData())
+    logger.debug('image before resizing, width: {}, height: {}'.format(im.width(), im.height()))
     if Setup.config['ratioKeep'] == 'height':
         # scale the image to the given height and keep ratio
+        logger.debug('scale according to height: {}'.format(Setup.config['height']))
         im = im.scaledToHeight(int(Setup.config['height']))
     elif Setup.config['ratioKeep'] == 'width':
         # scale the image to the given width and keep ratio
+        logger.debug('scale according to width: {}'.format(Setup.config['width']))
         im = im.scaledToWidth(int(Setup.config['width']))
+    logger.debug('image after resizing, width: {}, height: {}'.format(im.width(), im.height()))
     return im
 
 def imageResizer(self):
     mime = mw.app.clipboard().mimeData()
     n = QMimeData()
     if mime.hasImage():
+        logger.debug('mime contains images in it, set Setup.isPasting as True')
         Setup.isPasting = True
         n.setImageData(mime.imageData())
         QApplication.clipboard().setMimeData(n)
@@ -126,6 +166,7 @@ def _processImage_around(self, mime, _old):
     Resize the image before processing
     """
     if Setup.config['auto'] == True or Setup.isPasting == True:
+        logger.debug('auto mode is set, images will be resized and pasted')
         im = resize(mime)
         # assign the new imageData to the old _processImage function to use
         new = QMimeData()
@@ -133,6 +174,7 @@ def _processImage_around(self, mime, _old):
         ret = _old(self, new)
         Setup.isPasting = False
     else:
+        logger.debug('auto mode isn\'t set, images will not be resized')
         ret = _old(self, mime)
     return ret
 
@@ -191,10 +233,10 @@ class Settings(QWidget):
     """
     Image Resizer Settings Window
     """
-    def __init__(self, config):
+    def __init__(self, setup, config):
         super(Settings, self).__init__()
 
-        Setup.config = Setup.config
+        self.setup = setup
         self.pickleFile = Setup.pickleFile
 
         self.setupUI()
@@ -222,6 +264,7 @@ class Settings(QWidget):
         with open(self.pickleFile, 'wb') as f:
             pickle.dump(Setup.config, f)
 
+        logger.debug('saved config to config.pickle: {}'.format(Setup.config))
         self.close()
 
     def loadFromDisk(self):
@@ -239,6 +282,17 @@ class Settings(QWidget):
             self.ratioCb.setCurrentIndex(0)
         elif Setup.config['ratioKeep'] == 'width':
             self.ratioCb.setCurrentIndex(1)
+        logger.debug('config is loaded from config.pickle: {}'.format(Setup.config))
+
+    def reset(self):
+        """reset all configurations to default"""
+        if os.path.exists(Setup.irFolder):
+            logger.debug('removing ImageResizer\'s folder')
+            shutil.rmtree(Setup.irFolder)
+        logger.debug('set config to the default one: {}'.format(Setup.defaultConfig))
+        Setup.config = copy.deepcopy(Setup.defaultConfig)
+        self.setup.checkConfigAndLoad() 
+        self.checkPickle()
 
     def updateKeyCombinations(self):
         """
@@ -257,6 +311,8 @@ class Settings(QWidget):
         if Setup.config['keys'].get('Extra'):
             label.setText(label.text() +
                     Setup.config['keys'].get('Extra'))
+
+        logger.debug('shortcut is updated: {}'.format(Setup.config['keys']))
 
     def showGrabKey(self):
         self.GrabKeyWindow = GrabKey(self)
@@ -301,10 +357,13 @@ class Settings(QWidget):
         okButton.clicked.connect(self.saveToDisk)
         cancelButton = QPushButton("Cancel")
         cancelButton.clicked.connect(self.close)
+        resetButton = QPushButton("Reset")
+        resetButton.clicked.connect(self.reset)
         btnLayout = QHBoxLayout()
         btnLayout.addStretch(1)
         btnLayout.addWidget(okButton)
         btnLayout.addWidget(cancelButton)
+        btnLayout.addWidget(resetButton)
         mainLayout.addLayout(btnLayout)
 
         # center the window
@@ -320,4 +379,3 @@ class Settings(QWidget):
         return line
 
 s = Setup(imageResizer)
-
