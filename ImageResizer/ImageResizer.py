@@ -201,6 +201,7 @@ def checkAndResize(mime, editor):
 
     :mime: QMimeData to be checked
      editor: an instance of Editor
+
     :returns: image filled QMimeData if the contained url represents an image file, the original QMimeData otherwise
 
     """

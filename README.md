@@ -5,6 +5,11 @@ It contains the following addons till now:
 
 1. ImageResizer
 2. PurgeAttribute
+3. GoldenDictMedia
+
+# How to use it
+
+Put the respective `.py` file in your Anki addon folder and restart it. Some of these addons are uploaded to [ankiweb](https://ankiweb.net/shared/addons/), you can install them from there directly.
 
 ## 1. ImageResizer
 
@@ -70,12 +75,32 @@ Now it's not hard to see, right?
 
 To choose which attribute you need to remove, edit the `purgeAttributes.py` file from menu `Tools --> Add-ons --> PurgeAttributes --> Edit`, and modify the variable `REMOVE_ATTRIBUTES` at will.
 
-### Notice
-As I tested it, the addon was ridiculously slow on Windows XP, yet it was quite fast on ubuntu. Haven't found a solution because I use Linux 99% of the time. If you have a solution here, please pull a request to fix it.
+## GoldenDictMedia
 
-# Issues
+### Introduction
 
-Issues and requests to improve the addon are always welcomed.
+The addon is used to import audios and images from `goldendict` directly when copying and pasting from it. For example, for the following text:
+
+![goldendict](http://i.imgur.com/0Vu6v4N.png)
+
+if you copy the definitions directly into anki, you will find that the pronounciations and pictures will not be recognized by Anki. This is because the paths of those audios and images are not set correctly. Usually it's started with "gdau://". Copy the entire definition in it, and paste it in Anki, then hit `Ctrl + Shift + X` to Edit HTML, find the part containing "gdau://", mine's are like this
+
+```html
+...<a href="gdau://e73293ef041cad84654c62963f7b6bb7/ame_apple1.wav">...
+```
+
+Copy the part after `gadu://` immediately, which is `e73293ef041cad84654c62963f7b6bb7` in my case. Then add it in the `GoldenDictMedia.py` file in your Anki addon folder:
+
+```python
+addressMap = {'e73293ef041cad84654c62963f7b6bb7': '/media/OS/Dictionaries/longman5/En-En-Longman_DOCE5.dsl.dz.files', 
+        '4f74aab894b66b99af88061eadcf5104': '/media/OS/Dictionaries/Webster\'s Collegiate Dictionary/Webster\'s Collegiate Dictionary.dsl.files'}
+```
+
+This is a map, what `e73293ef041cad84654c62963f7b6bb7` refers to is the path which contains all the audios and images of the dictionary. This is usually a `dz` file, you may need to uncompress it beforehand. Here I added two dictionaries. The addon will replace the `gdau://...` part with the real one and import the media.
+
+# Known Issues
+
+PurgeAttributes is ridiculously slow on Windows XP. Haven't found a solution yet.
 
 # License
 
