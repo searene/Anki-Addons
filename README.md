@@ -38,7 +38,7 @@ You can change the shortcut and the size of the image etc. from `Tools --> Image
 
 The `Settings` window will pop up.
 
-![Settings](https://i.imgur.com/h0elRHu.png)
+![Settings](http://i.imgur.com/1tkPzPG.png)
 
 Check `Automatically resize the image when pasting` if you want to paste the resized image when using `Ctrl+V`. Anki will paste the original-sized image if you uncheck it.
 
@@ -75,15 +75,15 @@ Now it's not hard to see, right?
 
 To choose which attribute you need to remove, edit the `purgeAttributes.py` file from menu `Tools --> Add-ons --> PurgeAttributes --> Edit`, and modify the variable `REMOVE_ATTRIBUTES` at will.
 
-## GoldenDictMedia
+## 3. GoldenDictMedia
 
 ### Introduction
 
-The addon is used to import audios and images from `goldendict` directly when copying and pasting from it. For example, for the following text:
+The addon is used to import audios and images from `goldendict` directly when copying and pasting from it. For example, for the following one:
 
 ![goldendict](http://i.imgur.com/0Vu6v4N.png)
 
-if you copy the definitions directly into anki, you will find that the pronounciations and pictures will not be recognized by Anki. This is because the paths of those audios and images are not set correctly. Usually it's started with "gdau://". Copy the entire definition in it, and paste it in Anki, then hit `Ctrl + Shift + X` to Edit HTML, find the part containing "gdau://", mine's are like this
+If you copy the definitions directly into anki, you will find that the pronounciations and pictures will not be recognized by Anki. This is because the paths of those audios and images are not set correctly. Usually it's started with "gdau://". Copy the entire definition in it, and paste it in Anki, then hit `Ctrl + Shift + X` to Edit HTML, find the part containing "gdau://", mine's are like this
 
 ```html
 ...<a href="gdau://e73293ef041cad84654c62963f7b6bb7/ame_apple1.wav">...
