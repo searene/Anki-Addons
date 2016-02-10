@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 from anki.hooks import wrap
-from aqt.utils import tooltip
+from anki.media import MediaManager
+from aqt.utils import tooltip, showWarning
 from aqt.editor import Editor, EditorWebView
 from aqt import mw
 
@@ -14,6 +15,9 @@ import pickle
 import logging
 import copy
 import shutil
+import uuid
+import tempfile
+import urllib2
 
 
 # Get log file
@@ -30,6 +34,12 @@ open(logFile, 'a').close()
 logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s', filename = logFile, level = logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+# global variable to record whether anki is processing an image file or not, the addon will try to scale the image in the writeData function is the variable is set True
+processingPic = False
+
+# current image file's suffix
+curSuffix = None
+
 # settings main window, Qt won't show the window if
 # we don't assign a global variable to Settings()
 
@@ -43,8 +53,8 @@ class Setup(object):
         auto = True,
         keys = dict(Ctrl = True, Alt = False, 
                 Shift = True, Extra = 'V'),
-        width = '1000',
-        height = '1000',
+        width = '400',
+        height = '400',
         ratioKeep = 'height'
     )
 
@@ -110,21 +120,23 @@ class Setup(object):
         # resize image when pasting
         EditorWebView._processImage = wrap(EditorWebView._processImage, _processImage_around, 'around')
 
+        # wrap writeData so we can scale the image file beforehand
+        MediaManager.writeData = wrap(MediaManager.writeData, _writeData_around, 'around')
+
     def _settings(self):
         """
         Show the settings dialog if the user clicked on the menu
         """
         self.settingsMw = Settings(self, Setup.config)
 
-def resize(mime):
+def resize(im):
     """Resize the image
 
-    :mime: mime to be resized
+    :im: QImage to be resized
     :returns: resized QImage
 
     """
     logger.debug('resizing images...')
-    im = QImage(mime.imageData())
     logger.debug('image before resizing, width: {}, height: {}'.format(im.width(), im.height()))
     if Setup.config['ratioKeep'] == 'height':
         # scale the image to the given height and keep ratio
@@ -146,6 +158,19 @@ def imageResizer(self):
         n.setImageData(mime.imageData())
         QApplication.clipboard().setMimeData(n)
         QApplication.focusWidget().onPaste()
+    elif checkPicFile(mime):
+        logger.debug('image file was copied, ImageResizer is going to resize it and paste it')
+        pic = mime.urls()[0].toString()[7:]
+        im = QImage()
+        im.load(pic)
+
+        # resize
+        im = resize(im)
+
+        n.setImageData(im)
+        QApplication.clipboard().setMimeData(n)
+        QApplication.focusWidget().onPaste()
+
 
 def ImageResizerButton(self):
     shortcut = '+' .join([k for k, v in Setup.config['keys'].items() if v == True])
@@ -153,13 +178,80 @@ def ImageResizerButton(self):
     self._addButton("Image Resizer", lambda s = self: imageResizer(self), _(shortcut), 
         text="Image Resizer", size=True)
 
+def _writeData_around(self, opath, filecontents, _old):
+    """scale the image contained in filecontents before it is written in disk"""
+    global processingPic, curSuffix
+    logger.debug('entered _writeData_around, processingPic: {}, curSuffix: {}, Setup.config: {}, Setup.isPasting: {}'.format(processingPic, curSuffix, Setup.config['auto'], Setup.isPasting))
+    try:
+        if processingPic and curSuffix and (Setup.config['auto'] == True or Setup.isPasting == True):
+            # This is an image file, scale it
+
+            # load filecontents to QImage
+            im = QImage()
+            im.loadFromData(filecontents)
+
+            # get the resized image data with the help of QMime
+            im_resized = resize(im)
+
+            # get the filecontents of the resized image, I cannot find a convenient API to acheive this, so I decided to save the QImage to disk and read it to filecontents
+            logger.debug('Writing the resized image to disk to read the file contents in the image...')
+            fp = tempfile.NamedTemporaryFile()
+            logger.debug('temporary file name: {}'.format(fp.name))
+            im_resized.save(fp.name, curSuffix)
+            fp.seek(0)
+            filecontents = fp.read()
+            fp.close()
+    except Exception, e:
+        showWarning(_("An error occurred while opening %s") % e)
+    finally:
+        processingPic = False
+        curSuffix = None
+        Setup.isPasting = False
+
+        logger.debug('calling the old writeData function...')
+        return _old(self, opath, filecontents)
+
+def checkPicFile(mime):
+    """check if mime contains url and if the url represents a picture file path
+
+    :mime: QMimeData to be checked
+    :returns: True if the contained url represents an image file, False otherwise
+
+    """
+    logger.debug('checking if url contained in mime is a pic file...')
+    pic = ("jpg", "jpeg", "png", "tif", "tiff", "gif", "svg", "webp")
+    # if mime doesn't contain url, return False directly
+    if not mime.hasUrls():
+        logger.debug('mime doesn\'t contain urls')
+        return False
+    url = mime.urls()[0].toString()
+
+    # check prefix
+    if not url.startswith('file://'):
+        logger.debug('prefix doesn\'t qualify')
+        return False
+
+    # check suffix
+    for suffix in pic:
+        if url.endswith(suffix):
+            logger.debug('suffix {} meet requirements'.format(suffix))
+            global curSuffix
+            curSuffix = suffix
+            return True
+
+    return False
+
 def _processMime_around(self, mime, _old):
     """ process image only if QMimeData contains image
     """
+
     if mime.hasImage():
         return self._processImage(mime)
-    else:
-        return _old(self, mime)
+    elif checkPicFile(mime):
+        global processingPic
+        processingPic = True
+
+    return _old(self, mime)
 
 def _processImage_around(self, mime, _old):
     """
@@ -167,7 +259,8 @@ def _processImage_around(self, mime, _old):
     """
     if Setup.config['auto'] == True or Setup.isPasting == True:
         logger.debug('auto mode is set, images will be resized and pasted')
-        im = resize(mime)
+        im = mime.imageData()
+        im = resize(im)
         # assign the new imageData to the old _processImage function to use
         new = QMimeData()
         new.setImageData(im)
