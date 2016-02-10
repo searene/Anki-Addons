@@ -9,6 +9,7 @@ from aqt import mw
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+from PyQt4.QtWebKit import *
 
 import os
 import pickle
@@ -27,6 +28,7 @@ logFile = os.path.join(irFolder, 'imageResizer.log')
 # if ImageResizer's folder doesn't exist, create one
 if not os.path.exists(irFolder):
     os.makedirs(irFolder)
+
 # create the logFile
 open(logFile, 'a').close()
 
@@ -73,8 +75,6 @@ class Setup(object):
 
     logger.debug("pickleFile: {}".format(pickleFile))
 
-    isPasting = False
-
     def __init__(self, imageResizer):
         self.checkConfigAndLoad()
         self.setupMenu()
@@ -114,14 +114,11 @@ class Setup(object):
         """
         # setup button
         Editor.setupButtons = wrap(Editor.setupButtons, ImageResizerButton, 'after')
-        EditorWebView._processMime = wrap(EditorWebView._processMime, _processMime_around, 'around')
         Editor.imageResizer = imageResizer
-
-        # resize image when pasting
-        EditorWebView._processImage = wrap(EditorWebView._processImage, _processImage_around, 'around')
 
         # wrap writeData so we can scale the image file beforehand
         MediaManager.writeData = wrap(MediaManager.writeData, _writeData_around, 'around')
+        EditorWebView._processMime = wrap(EditorWebView._processMime, _processMime_around, 'around')
 
     def _settings(self):
         """
@@ -149,28 +146,31 @@ def resize(im):
     logger.debug('image after resizing, width: {}, height: {}'.format(im.width(), im.height()))
     return im
 
-def imageResizer(self):
+def imageResizer(self, paste = True):
+    """resize the image contained in the clipboard
+       paste: paste the resized image in the currently focused widget if the parameter is set True
+
+       returns: QMimeData"""
+
+    global processingPic
+
     mime = mw.app.clipboard().mimeData()
-    n = QMimeData()
+
+    # check if mime contains any image related urls, and put the image data in the clipboard if it contains it
+    mime = checkPicFile(mime)
+
+    # check if mime contains images or any image file urls
     if mime.hasImage():
-        logger.debug('mime contains images in it, set Setup.isPasting as True')
-        Setup.isPasting = True
-        n.setImageData(mime.imageData())
-        QApplication.clipboard().setMimeData(n)
-        QApplication.focusWidget().onPaste()
-    elif checkPicFile(mime):
-        logger.debug('image file was copied, ImageResizer is going to resize it and paste it')
-        pic = mime.urls()[0].toString()[7:]
-        im = QImage()
-        im.load(pic)
+        logger.debug('mime contains images relative data in it, set processingPic as True and paste it, _writeData_around will resize it')
 
-        # resize
-        im = resize(im)
+        # set processingPic as True so that _writeData_around will resize the image
+        processingPic = True
 
-        n.setImageData(im)
-        QApplication.clipboard().setMimeData(n)
-        QApplication.focusWidget().onPaste()
+        if paste:
+            # paste it in the currently focused widget
+            QApplication.focusWidget().onPaste()
 
+    return mime
 
 def ImageResizerButton(self):
     shortcut = '+' .join([k for k, v in Setup.config['keys'].items() if v == True])
@@ -178,12 +178,37 @@ def ImageResizerButton(self):
     self._addButton("Image Resizer", lambda s = self: imageResizer(self), _(shortcut), 
         text="Image Resizer", size=True)
 
+def _processMime_around(self, mime, _old):
+    """I found that anki dealt with html, urls, text first before dealing with image, I didn't find any advantages in it. If the user wants to copy an image from the web broweser, it will cause anki to fetch the image again, which is a waste of time. the function will try to deal with image data first if mime contains it"""
+
+    if Setup.config['auto'] == False:
+        return _old(self, mime)
+
+    logger.debug('getting the resized QImage...')
+    mime = self.editor.imageResizer(paste = False)
+
+    if mime.hasImage():
+
+        logger.debug('set processingPic as True so _writeData_around will resize it')
+        global processingPic
+        processingPic = True
+
+        logger.debug('let anki handle the resized image')
+        return self._processImage(mime)
+
+    else:
+        logger.debug("image data isn't detected, run the old _processMime function")
+        return _old(self, mime)
+
 def _writeData_around(self, opath, filecontents, _old):
     """scale the image contained in filecontents before it is written in disk"""
+
     global processingPic, curSuffix
-    logger.debug('entered _writeData_around, processingPic: {}, curSuffix: {}, Setup.config: {}, Setup.isPasting: {}'.format(processingPic, curSuffix, Setup.config['auto'], Setup.isPasting))
+
+    logger.debug("entered _writeData_around, processingPic: {}, curSuffix: {}, Setup.config['auto']: {}".format(processingPic, curSuffix, Setup.config['auto']))
+
     try:
-        if processingPic and curSuffix and (Setup.config['auto'] == True or Setup.isPasting == True):
+        if processingPic:
             # This is an image file, scale it
 
             # load filecontents to QImage
@@ -197,7 +222,7 @@ def _writeData_around(self, opath, filecontents, _old):
             logger.debug('Writing the resized image to disk to read the file contents in the image...')
             fp = tempfile.NamedTemporaryFile()
             logger.debug('temporary file name: {}'.format(fp.name))
-            im_resized.save(fp.name, curSuffix)
+            im_resized.save(fp.name, curSuffix if curSuffix else 'PNG')
             fp.seek(0)
             filecontents = fp.read()
             fp.close()
@@ -206,30 +231,29 @@ def _writeData_around(self, opath, filecontents, _old):
     finally:
         processingPic = False
         curSuffix = None
-        Setup.isPasting = False
 
         logger.debug('calling the old writeData function...')
         return _old(self, opath, filecontents)
 
 def checkPicFile(mime):
-    """check if mime contains url and if the url represents a picture file path
+    """check if mime contains url and if the url represents a picture file path, fetch the url and put the image in the clipboard if the url represents an image file
 
     :mime: QMimeData to be checked
-    :returns: True if the contained url represents an image file, False otherwise
+    :returns: image filled QMimeData if the contained url represents an image file, the original QMimeData otherwise
 
     """
     logger.debug('checking if url contained in mime is a pic file...')
     pic = ("jpg", "jpeg", "png", "tif", "tiff", "gif", "svg", "webp")
-    # if mime doesn't contain url, return False directly
+    # if mime doesn't contain url, return None directly
     if not mime.hasUrls():
         logger.debug('mime doesn\'t contain urls')
-        return False
+        return mime
     url = mime.urls()[0].toString()
 
     # check prefix
     if not url.startswith('file://'):
         logger.debug('prefix doesn\'t qualify')
-        return False
+        return mime
 
     # check suffix
     for suffix in pic:
@@ -237,39 +261,16 @@ def checkPicFile(mime):
             logger.debug('suffix {} meet requirements'.format(suffix))
             global curSuffix
             curSuffix = suffix
-            return True
 
-    return False
+            # fetch the image, put it in the mime and return it
+            im = QImage()
+            im.load(url[7:])
+            mime = QMimeData()
+            mime.setImageData(im)
 
-def _processMime_around(self, mime, _old):
-    """ process image only if QMimeData contains image
-    """
+            return mime
 
-    if mime.hasImage():
-        return self._processImage(mime)
-    elif checkPicFile(mime):
-        global processingPic
-        processingPic = True
-
-    return _old(self, mime)
-
-def _processImage_around(self, mime, _old):
-    """
-    Resize the image before processing
-    """
-    if Setup.config['auto'] == True or Setup.isPasting == True:
-        logger.debug('auto mode is set, images will be resized and pasted')
-        im = mime.imageData()
-        im = resize(im)
-        # assign the new imageData to the old _processImage function to use
-        new = QMimeData()
-        new.setImageData(im)
-        ret = _old(self, new)
-        Setup.isPasting = False
-    else:
-        logger.debug('auto mode isn\'t set, images will not be resized')
-        ret = _old(self, mime)
-    return ret
+    return mime
 
 class GrabKey(QWidget):
     """
