@@ -16,7 +16,6 @@ import pickle
 import logging
 import copy
 import shutil
-import uuid
 import tempfile
 import urllib2
 
@@ -49,8 +48,8 @@ class Setup(object):
         auto = True,
         keys = dict(Ctrl = True, Alt = False, 
                 Shift = True, Extra = 'V'),
-        width = '400',
-        height = '400',
+        width = '100',
+        height = '100',
         ratioKeep = 'height'
     )
 
@@ -209,14 +208,18 @@ def checkAndResize(mime, editor):
 
     logger.debug('checking if url contained in mime is a pic file...')
     pic = ("jpg", "jpeg", "png", "tif", "tiff", "gif", "svg", "webp")
-    # if mime doesn't contain url, return None directly
-    if mime.hasUrls():
+
+    if mime.hasImage():
+        logger.debug('find image in mime, resize and return the mime')
+        im = resize(mime.imageData())
+        mime = QMimeData()
+        mime.setImageData(im)
+
+    elif mime.hasUrls():
         url = mime.urls()[0].toString()
 
         # check prefix
-        if not url.startswith('file://'):
-            logger.debug('prefix doesn\'t qualify')
-            return mime
+        prefix = url[:url.find(':')]
 
         # check suffix
         for suffix in pic:
@@ -225,7 +228,11 @@ def checkAndResize(mime, editor):
 
                 # fetch the image, put it in the mime and return it
                 im = QImage()
-                im.load(url[7:])
+                req = urllib2.Request(url, None, {
+                    'User-Agent': 'Mozilla/5.0 (compatible; Anki)'})
+                filecontents = urllib2.urlopen(req).read()
+                
+                im.loadFromData(filecontents)
 
                 # resize it
                 im = resize(im)
@@ -234,12 +241,6 @@ def checkAndResize(mime, editor):
                 mime.setImageData(im)
 
                 return mime
-
-    elif mime.hasImage():
-        logger.debug('find image in mime, resize and return the mime')
-        im = resize(mime.imageData())
-        mime = QMimeData()
-        mime.setImageData(im)
 
     return mime
 
