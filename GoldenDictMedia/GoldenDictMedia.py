@@ -85,25 +85,21 @@ class Setup:
             pickle.dump(configDict, f)
 
     @classmethod
-    def loadConfigFromDisk(cls, configDict = None, configFile = None):
+    def loadConfigFromDisk(cls):
         """load config file to Setup.config"""
 
-        if not configDict:
-            configDict = Setup.config
-        if not configFile:
-            configFile = Setup.configFile
-
-        with open(configFile, 'rb') as f:
-            configDict = pickle.load(f)
+        with open(Setup.configFile, 'rb') as f:
+            Setup.config = pickle.load(f)
 
 class addNewWindow(QDialog):
-    def __init__(self, code):
+    def __init__(self, code, filename):
         super(addNewWindow, self).__init__()
 
         # whether current import is sucessful
         self.importRes = None
 
         self.code = code
+        self.filename = filename
         self.setupUI()
 
     def setupUI(self):
@@ -176,23 +172,26 @@ class addNewWindow(QDialog):
             # ignore the media code
             if self.code not in Setup.config['codesIgnored']:
                 Setup.config['codesIgnored'].append(self.code)
+                Setup.saveConfigToDisk()
                 tooltip('Current dictionary was ignored, click on reset to restore should you need it again')
                 self.importRes = False
                 self.close()
                 return
 
-        folder = self.pathEdit.text()
+        folder = self.pathEdit.text().strip()
 
         # remove the trailing / or \ 
         if folder.endswith('/') or folder.endswith('\\'):
             folder = folder[:-1]
 
-        if not os.path.exists(self.pathEdit.text()):
+        fullPath = os.path.join(self.pathEdit.text(), self.filename)
+        if not (os.path.exists(fullPath) and os.path.exists(folder)):
             msg = QMessageBox(self)
-            msg.setText("Folder doesn't exist, please select again")
-            msg.setWindowTitle("Folder doesn't exist")
+            msg.setText("Folder doesn't exist or doesn't contain the needed media, please select again")
+            msg.setWindowTitle("Directory selected is not the right one")
             msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
             msg.exec_()
+            return
 
         Setup.config['addressMap'][self.code] = folder
         Setup.saveConfigToDisk()
@@ -210,12 +209,20 @@ class SettingsDialog(QDialog):
         mainLayout = QVBoxLayout()
         self.setLayout(mainLayout)
 
+        print 'setupUI, Setup.config: {}'.format(Setup.config)
+        self.importedLabel = QLabel("{} dictionaries imported"
+                .format(len(Setup.config['addressMap'])))
+        self.ignoredLabel = QLabel("{} dictionaries ignored"
+                .format(len(Setup.config['codesIgnored'])))
+        mainLayout.addWidget(self.importedLabel)
+        mainLayout.addWidget(self.ignoredLabel)
+        
         self.checkCb = QCheckBox('Check goldendict media everytime it pastes')
         mainLayout.addWidget(self.checkCb)
 
         # add OK and Cancel buttons
         okButton = QPushButton("OK")
-        okButton.clicked.connect(self.saveToDisk)
+        okButton.clicked.connect(self.onOK)
         cancelButton = QPushButton("Cancel")
         cancelButton.clicked.connect(self.close)
         resetButton = QPushButton("Reset")
@@ -232,6 +239,9 @@ class SettingsDialog(QDialog):
 
         self.setWindowTitle('GoldenDictMedia Settings')
 
+    def onOK(self):
+        self.saveToDisk()
+        self.close()
 
     def saveToDisk(self, configDict = None, configFile = None):
         """save configurations on the window to the config file"""
@@ -241,42 +251,51 @@ class SettingsDialog(QDialog):
         if not configFile:
             configFile = Setup.configFile
 
+        self.updateConfigFromUI(configDict)
         configDict['check'] = self.checkCb.isChecked()
         Setup.saveConfigToDisk(configDict, configFile)
-        self.close()
 
-    def loadFromDisk(self, configDict = None, configFile = None):
+    def updateUIFromConfig(self, configDict):
+        self.checkCb.setChecked(configDict['check'])
+        self.importedLabel.setText("{} dictionaries imported"
+                .format(len(configDict['addressMap'])))
+        self.ignoredLabel.setText("{} dictionaries ignored"
+                .format(len(configDict['codesIgnored'])))
+
+    def updateConfigFromUI(self, configDict):
+        configDict['check'] = self.checkCb.isChecked()
+        if self.importedLabel.text().startswith('0'):
+            configDict['addressMap'] = {}
+        if self.ignoredLabel.text().startswith('0'):
+            configDict['codesIgnored'] = []
+
+    def loadFromDisk(self):
         """load configurations from the config file to the window"""
 
-        if not configDict:
-            configDict = Setup.config
-        if not configFile:
-            configFile = Setup.configFile
-
-        Setup.loadConfigFromDisk(configDict, configFile)
-        self.checkCb.setChecked(configDict['check'])
+        Setup.loadConfigFromDisk()
+        self.updateUIFromConfig(Setup.config)
 
     def reset(self):
         """save the default configDict to disk then load it"""
-        self.saveToDisk(configDict = Setup.defaultConfig)
-        self.loadFromDisk()
-        tooltip('Reset completed.')
+        self.updateUIFromConfig(Setup.defaultConfig)
 
     def openWindow(self):
         """
         Show the settings dialog if the user clicked on the menu
         """
+        self.updateUIFromConfig()
         self.settingsMw = self
 
-def addNewMedia(code):
+def addNewMedia(code, filename):
     if code in Setup.config['codesIgnored']:
         # the code should be ignored
         return False
 
     # Let's deal with the new media
-    anw = addNewWindow(code)
+    anw = addNewWindow(code, filename)
     anw.exec_()
     
+    # importRes represents whether importation is successful
     return anw.importRes
 
 def importMedia(self, mime, _old):
@@ -324,7 +343,8 @@ def importMedia(self, mime, _old):
         code = matchObj.group(0)
         if code not in addressMap:
             # new media
-            res = addNewMedia(code)
+            filename = os.path.basename(goldenPath)
+            res = addNewMedia(code, filename)
             if not res:
                 # media import failed, continue to
                 # process the next link
