@@ -49,6 +49,7 @@ class Setup:
 
     def openSettingsDialog(self):
         self.s = SettingsDialog()
+        self.s.exec_()
 
     @classmethod
     def checkConfig(cls):
@@ -140,7 +141,6 @@ class addNewWindow(QDialog):
         self.move(QDesktopWidget().availableGeometry().center() - self.frameGeometry().center())
 
         self.setWindowTitle('Add New Goldendict Media')
-        self.show()
 
     def cancel(self):
         self.importRes = False
@@ -230,8 +230,7 @@ class SettingsDialog(QDialog):
         # center the window
         self.move(QDesktopWidget().availableGeometry().center() - self.frameGeometry().center())
 
-        self.setWindowTitle('GoldenDictMedia SettingsDialog')
-        self.show()
+        self.setWindowTitle('GoldenDictMedia Settings')
 
 
     def saveToDisk(self, configDict = None, configFile = None):
@@ -276,12 +275,8 @@ def addNewMedia(code):
 
     # Let's deal with the new media
     anw = addNewWindow(code)
+    anw.exec_()
     
-    loop = QEventLoop()
-    anw.destroyed.connect(loop.quit)
-    loop.exec_()
-
-    print 'hello'
     return anw.importRes
 
 def importMedia(self, mime, _old):
