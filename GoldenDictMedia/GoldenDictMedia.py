@@ -37,6 +37,7 @@ class Setup:
 
     def __init__(self):
         self.checkConfig()
+        self.loadConfigFromDisk()
         self.setupMenu()
 
     def setupMenu(self):
