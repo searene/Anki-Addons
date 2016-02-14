@@ -19,7 +19,7 @@ Put the respective `.py` file in your Anki addon folder and restart it. Some of 
 
 # Known Issues
 
-PurgeAttributes is ridiculously slow on Windows XP. Haven't found a solution yet.
+PurgeAttributes is ridiculously slow on Windows. Haven't found a solution yet.
 
 # License
 
