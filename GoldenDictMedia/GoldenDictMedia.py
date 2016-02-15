@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from anki.hooks import wrap
+from anki.utils import stripHTMLMedia
 from aqt.editor import Editor, EditorWebView
 from aqt.utils import tooltip
 from aqt import dialogs, mw
@@ -299,6 +300,16 @@ def addNewMedia(code, filename):
     # importRes represents whether importation is successful
     return anw.importRes
 
+def urlToLink_around(self, url, _old):
+    pic = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".gif", ".svg", ".webp")
+    ext = os.path.splitext(url)[-1]
+    if (os.path.isabs(url) == False) and (ext in pic):
+        # goldendict's img url is a relative path, which is
+        # already processed, skip it
+        return '<img src={}>'.format(url)
+
+    return _old(self, url)
+
 def importMedia(self, mime, _old):
     """import audios and images from goldendict"""
 
@@ -377,8 +388,12 @@ def importMedia(self, mime, _old):
     newMime = QMimeData()
     newMime.setHtml(html)
 
+    # set text so the addon is able to work even when StripHTML is on
+    newMime.setText(stripHTMLMedia(html))
+
     # default _processHtml method
     return _old(self, newMime)
 
 EditorWebView._processHtml = wrap(EditorWebView._processHtml, importMedia, 'around')
+Editor.urlToLink = wrap(Editor.urlToLink, urlToLink_around, 'around')
 setup = Setup()
