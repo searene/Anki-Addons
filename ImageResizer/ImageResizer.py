@@ -133,7 +133,7 @@ def resize(im):
             return im
         # scale the image to the given height and keep ratio
         logger.debug('scale according to height: {}'.format(Setup.config['height']))
-        im = im.scaledToHeight(int(Setup.config['height']))
+        im = im.scaledToHeight(int(Setup.config['height']), Qt.SmoothTransformation)
     elif Setup.config['ratioKeep'] == 'width':
 
         if im.width() == Setup.config['width']:
@@ -141,7 +141,7 @@ def resize(im):
             return im
         # scale the image to the given width and keep ratio
         logger.debug('scale according to width: {}'.format(Setup.config['width']))
-        im = im.scaledToWidth(int(Setup.config['width']))
+        im = im.scaledToWidth(int(Setup.config['width']), Qt.SmoothTransformation)
     logger.debug('image after resizing, width: {}, height: {}'.format(im.width(), im.height()))
     return im
 
