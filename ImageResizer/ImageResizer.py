@@ -35,9 +35,6 @@ open(logFile, 'a').close()
 logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s', filename = logFile, level = logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# settings main window, Qt won't show the window if
-# we don't assign a global variable to Settings()
-
 class Setup(object):
 
     """Do all the necessary initialization when anki
@@ -119,10 +116,8 @@ class Setup(object):
 
 def resize(im):
     """Resize the image
-
     :im: QImage to be resized
     :returns: resized QImage
-
     """
     logger.debug('resizing images...')
     logger.debug('image before resizing, width: {}, height: {}'.format(im.width(), im.height()))
@@ -133,7 +128,7 @@ def resize(im):
             return im
         # scale the image to the given height and keep ratio
         logger.debug('scale according to height: {}'.format(Setup.config['height']))
-        im = im.scaledToHeight(int(Setup.config['height']))
+        im = im.scaledToHeight(int(Setup.config['height']), Qt.SmoothTransformation)
     elif Setup.config['ratioKeep'] == 'width':
 
         if im.width() == Setup.config['width']:
@@ -141,14 +136,13 @@ def resize(im):
             return im
         # scale the image to the given width and keep ratio
         logger.debug('scale according to width: {}'.format(Setup.config['width']))
-        im = im.scaledToWidth(int(Setup.config['width']))
+        im = im.scaledToWidth(int(Setup.config['width']), Qt.SmoothTransformation)
     logger.debug('image after resizing, width: {}, height: {}'.format(im.width(), im.height()))
     return im
 
 def imageResizer(self, paste = True, mime = None):
     """resize the image contained in the clipboard
        paste: paste the resized image in the currently focused widget if the parameter is set True
-
        returns: QMimeData"""
 
     if mime == None:
@@ -195,16 +189,13 @@ def _processMime_around(self, mime, _old):
         return _old(self, mime)
 
 def checkAndResize(mime, editor):
-    """check if mime contains url and if the url represents a picture file path, fetch the url and put the image in the clipboard if the url represents an image file
-    the function will resize the image if it finds that mime contains it
+    """check if mime contains url and if the url represents a picture file path, fetch the url and put the image in the clipboard, the function will resize the image if it finds that mime contains it
 
     :mime: QMimeData to be checked
-     editor: an instance of Editor
+    :editor: an instance of Editor
 
     :returns: image filled QMimeData if the contained url represents an image file, the original QMimeData otherwise
-
     """
-
 
     logger.debug('checking if url contained in mime is a pic file...')
     pic = ("jpg", "jpeg", "png", "tif", "tiff", "gif", "svg", "webp")
