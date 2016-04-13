@@ -13,7 +13,7 @@ PurgeAttributes in Anki. For example, you can remove the background, the default
 
 Automatically import the images and audios pasted from Goldendict.
 
-## [WriteToDisk](https://searene.github.io/2016/02/14/GoldenDictMedia/)
+## [WriteToDisk](https://searene.github.io/2016/04/13/WriteToDisk/)
 
 Save data every time a card is added or reviewed, avoid losing data when anki or system crashes.
 
