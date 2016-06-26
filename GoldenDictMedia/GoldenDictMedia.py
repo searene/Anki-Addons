@@ -320,6 +320,9 @@ def importMedia(self, mime, _old):
     elif dialogs._dialogs['Browser'][1]:
         # we are browsing cards
         window = dialogs._dialogs['Browser'][1]
+    elif dialogs._dialogs['EditCurrent'][1]:
+        # we are editing cards
+        window = dialogs._dialogs['EditCurrent'][1]
     else:
         # I don't know where we are, just exit
         return _old(self, mime) 
