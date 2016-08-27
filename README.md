@@ -17,6 +17,10 @@ Automatically import the images and audios pasted from Goldendict.
 
 Save data every time a card is added or reviewed, avoid losing data when anki or system crashes.
 
+## PurgeBrE
+
+This is a simple addon to remove the British pronunciation in the Longman DOCE 5th dictionary.
+
 # How to use it
 
 Put the respective `.py` file in your Anki addon folder and restart it. Some of these addons are uploaded to [ankiweb](https://ankiweb.net/shared/addons/), you can install them from there directly.
