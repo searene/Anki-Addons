@@ -21,6 +21,10 @@ Save data every time a card is added or reviewed, avoid losing data when anki or
 
 This is a simple addon to remove the British pronunciation in the Longman DOCE 5th dictionary.
 
+Put [PurgeBrE](https://raw.githubusercontent.com/searene/Anki-Addons/master/PurgeBrE/PurgeBrE.py) file in the Anki's addon directory(You can find it in Anki's menu --> Tools --> Add-ons --> Open Add-ons Folder).
+
+In fact, this addon is only meant to remove the British pronunciation in Longman DOCE dictionary, the functionality is so specific and limited I don't think others would need it. So I didn't write any documentation here at first. The reason why I put the file here is just to help others who are also writing an anki addon with a better idea on how it works.
+
 # How to use it
 
 Put the respective `.py` file in your Anki addon folder and restart it. Some of these addons are uploaded to [ankiweb](https://ankiweb.net/shared/addons/), you can install them from there directly.
