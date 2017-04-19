@@ -35,6 +35,9 @@ open(logFile, 'a').close()
 logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s', filename = logFile, level = logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+# settings main window, Qt won't show the window if
+# we don't assign a global variable to Settings()
+
 class Setup(object):
 
     """Do all the necessary initialization when anki
@@ -121,22 +124,14 @@ def resize(im):
     """
     logger.debug('resizing images...')
     logger.debug('image before resizing, width: {}, height: {}'.format(im.width(), im.height()))
-    if Setup.config['ratioKeep'] == 'height':
-        
-        if im.height() == Setup.config['height']:
-            logger.debug('same height, skip')
-            return im
-        # scale the image to the given height and keep ratio
+    option = Setup.config['ratioKeep']
+    if option == 'height' or option == 'either' and im.width() <= im.height():
         logger.debug('scale according to height: {}'.format(Setup.config['height']))
         im = im.scaledToHeight(int(Setup.config['height']), Qt.SmoothTransformation)
-    elif Setup.config['ratioKeep'] == 'width':
-
-        if im.width() == Setup.config['width']:
-            logger.debug('same width, skip')
-            return im
-        # scale the image to the given width and keep ratio
+    elif option == 'width' or option == 'either' and im.height() < im.width():
         logger.debug('scale according to width: {}'.format(Setup.config['width']))
         im = im.scaledToWidth(int(Setup.config['width']), Qt.SmoothTransformation)
+        
     logger.debug('image after resizing, width: {}, height: {}'.format(im.width(), im.height()))
     return im
 
@@ -167,10 +162,10 @@ def ImageResizerButton(self):
     shortcut = '+' .join([k for k, v in Setup.config['keys'].items() if v == True])
     shortcut += '+' + Setup.config['keys']['Extra']
     self._addButton("Image Resizer", lambda s = self: imageResizer(self), _(shortcut), 
-        text="IR", tip="Image Resizer (%s)"%_(shortcut), size=True)
+        text="Image Resizer", size=True)
 
 def _processMime_around(self, mime, _old):
-    """I found that anki dealt with html, urls, text first before dealing with image, I didn't find any advantages in it. If the user wants to copy an image from the web broweser, it will cause anki to fetch the image again, which is a waste of time. the function will try to deal with image data first if mime contains it"""
+    """I found that anki dealt with html, urls, text first before dealing with image, I didn't find any advantages of it. If the user wants to copy an image from the web broweser, it will make anki fetch the image again, which is a waste of time. the function will try to deal with image data first if mime contains it"""
 
     if Setup.config['auto'] == False:
         logger.debug("Setup.config['auto'] is False, run the original _processMime directly")
@@ -189,13 +184,13 @@ def _processMime_around(self, mime, _old):
         return _old(self, mime)
 
 def checkAndResize(mime, editor):
-    """check if mime contains url and if the url represents a picture file path, fetch the url and put the image in the clipboard, the function will resize the image if it finds that mime contains it
-
+    """check if mime contains url and if the url represents a picture file path, fetch the url and put the image in the clipboard if the url represents an image file
+    the function will resize the image if it finds that mime contains it
     :mime: QMimeData to be checked
-    :editor: an instance of Editor
-
+     editor: an instance of Editor
     :returns: image filled QMimeData if the contained url represents an image file, the original QMimeData otherwise
     """
+
 
     logger.debug('checking if url contained in mime is a pic file...')
     pic = ("jpg", "jpeg", "png", "tif", "tiff", "gif", "svg", "webp")
@@ -318,6 +313,8 @@ class Settings(QWidget):
             Setup.config['ratioKeep'] = 'height'
         elif self.ratioCb.currentIndex() == 1:
             Setup.config['ratioKeep'] = 'width'
+        elif self.ratioCb.currentIndex() == 2:
+            Setup.config['ratioKeep'] = 'either'
         with open(self.pickleFile, 'wb') as f:
             pickle.dump(Setup.config, f)
 
@@ -339,6 +336,9 @@ class Settings(QWidget):
             self.ratioCb.setCurrentIndex(0)
         elif Setup.config['ratioKeep'] == 'width':
             self.ratioCb.setCurrentIndex(1)
+        elif Setup.config['ratioKeep'] == 'either':
+            self.ratioCb.setCurrentIndex(2)
+        self.setLineEditState()
         logger.debug('config is loaded from config.pickle: {}'.format(Setup.config))
 
     def reset(self):
@@ -381,7 +381,7 @@ class Settings(QWidget):
 
         # add widgets to set shortcut
         self.enableCb = QCheckBox('Automatically resize the image when pasting', self)
-        self.grabKeyLabel = QLabel('Current Key Combinations to paste the resized image: Ctrl+Shift+V')
+        self.grabKeyLabel = QLabel('Shortcut to paste the resized image: Ctrl+Shift+V')
         grabKeyBtn = QPushButton('Grab the key combinations', self)
         grabKeyBtn.clicked.connect(self.showGrabKey)
         keyHBox = QHBoxLayout()
@@ -398,6 +398,9 @@ class Settings(QWidget):
         self.ratioCb = QComboBox(self)
         self.ratioCb.addItem('scale to height and keep ratio')
         self.ratioCb.addItem('scale to width and keep ratio')
+        self.ratioCb.addItem('scale to the maximum dimension and keep ratio')
+        QObject.connect(self.ratioCb, SIGNAL("currentIndexChanged(int)"), self.setLineEditState)
+
         sizeLayout = QHBoxLayout()
         sizeLayout.addWidget(widthLable)
         sizeLayout.addWidget(self.widthEdit)
@@ -428,6 +431,35 @@ class Settings(QWidget):
 
         self.setWindowTitle('Image Resizer Settings')
         self.show()
+
+    def disableLineEdit(self, lineEdit):
+        lineEdit.setReadOnly(True)
+
+        # change color
+        palette = QPalette()
+        palette.setColor(QPalette.Base, Qt.gray)
+        palette.setColor(QPalette.Text, Qt.darkGray)
+        lineEdit.setPalette(palette)
+
+    def enableLineEdit(self, lineEdit):
+        lineEdit.setReadOnly(False)
+
+        # change color
+        palette = QPalette()
+        palette.setColor(QPalette.Base, Qt.white)
+        palette.setColor(QPalette.Text, Qt.black)
+        lineEdit.setPalette(palette)
+
+    def setLineEditState(self):
+        if self.ratioCb.currentIndex() == 0:
+            self.disableLineEdit(self.widthEdit)
+            self.enableLineEdit(self.heightEdit)
+        elif self.ratioCb.currentIndex() == 1:
+            self.disableLineEdit(self.heightEdit)
+            self.enableLineEdit(self.widthEdit)
+        elif self.ratioCb.currentIndex() == 2:
+            self.enableLineEdit(self.heightEdit)
+            self.enableLineEdit(self.widthEdit)
 
     def hLine(self):
         line = QFrame()
