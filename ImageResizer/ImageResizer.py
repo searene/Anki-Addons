@@ -29,7 +29,7 @@ if not os.path.exists(irFolder):
     os.makedirs(irFolder)
 
 # create the logFile
-open(logFile, 'a').close()
+open(logFile, 'w').close()
 
 # setup logger
 logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s', filename = logFile, level = logging.DEBUG)
@@ -45,6 +45,7 @@ class Setup(object):
     """
 
     config = dict(
+        isUpScalingDisabled = False,
         auto = True,
         keys = dict(Ctrl = True, Alt = False, 
                 Shift = True, Extra = 'V'),
@@ -59,13 +60,9 @@ class Setup(object):
     addonDir = mw.pm.addonFolder()
 
     logger.debug("Get addon Dir {}".format(addonDir))
-
     irFolder = os.path.join(addonDir, 'ImageResizer')
-
     logger.debug("ImageResizer's config folder: {}".format(irFolder))
-
     pickleFile = os.path.join(irFolder, 'config.pickle')
-
     logger.debug("pickleFile: {}".format(pickleFile))
 
     def __init__(self, imageResizer):
@@ -125,10 +122,11 @@ def resize(im):
     logger.debug('resizing images...')
     logger.debug('image before resizing, width: {}, height: {}'.format(im.width(), im.height()))
     option = Setup.config['ratioKeep']
-    if option == 'height' or option == 'either' and im.width() <= im.height():
+    isUpScalingDisabled = Setup.config['isUpScalingDisabled']
+    if (option == 'height' or (option == 'either' and im.width() <= im.height())) and ((isUpScalingDisabled and im.height() > Setup.config['height']) or not isUpScalingDisabled):
         logger.debug('scale according to height: {}'.format(Setup.config['height']))
         im = im.scaledToHeight(int(Setup.config['height']), Qt.SmoothTransformation)
-    elif option == 'width' or option == 'either' and im.height() < im.width():
+    elif (option == 'width' or (option == 'either' and im.height() < im.width())) and ((isUpScalingDisabled and im.width() > Setup.config['width']) or not isUpScalingDisabled):
         logger.debug('scale according to width: {}'.format(Setup.config['width']))
         im = im.scaledToWidth(int(Setup.config['width']), Qt.SmoothTransformation)
         
@@ -186,11 +184,12 @@ def _processMime_around(self, mime, _old):
 def checkAndResize(mime, editor):
     """check if mime contains url and if the url represents a picture file path, fetch the url and put the image in the clipboard if the url represents an image file
     the function will resize the image if it finds that mime contains it
+
     :mime: QMimeData to be checked
-     editor: an instance of Editor
+    :editor: an instance of Editor
+
     :returns: image filled QMimeData if the contained url represents an image file, the original QMimeData otherwise
     """
-
 
     logger.debug('checking if url contained in mime is a pic file...')
     pic = ("jpg", "jpeg", "png", "tif", "tiff", "gif", "svg", "webp")
@@ -306,6 +305,7 @@ class Settings(QWidget):
         """save settings to the current directory where the plugin lies,
            then close the settings window
         """
+        Setup.config['isUpScalingDisabled'] = self.disableUpScalingCb.isChecked();
         Setup.config['auto'] = self.enableCb.isChecked()
         Setup.config['width'] = self.widthEdit.text()
         Setup.config['height'] = self.heightEdit.text()
@@ -321,14 +321,22 @@ class Settings(QWidget):
         logger.debug('saved config to config.pickle: {}'.format(Setup.config))
         self.close()
 
+    def fillInMissedKeys(self, previousConfig, newConfig):
+        for key in previousConfig:
+            if key not in newConfig:
+                newConfig[key] = previousConfig[key]
+
     def loadFromDisk(self):
         """Load settings from disk
         """
         with open(self.pickleFile, 'rb') as f:
             Setup.config = pickle.load(f)
 
+        self.fillInMissedKeys(Setup.defaultConfig, Setup.config)
+
         # reflect the settings on the window
         self.enableCb.setChecked(Setup.config['auto'])
+        self.disableUpScalingCb.setChecked(Setup.config['isUpScalingDisabled'])
         self.updateKeyCombinations()
         self.widthEdit.setText(Setup.config['width'])
         self.heightEdit.setText(Setup.config['height'])
@@ -357,7 +365,7 @@ class Settings(QWidget):
         in the settings window according to Setup.config
         """
         label = self.grabKeyLabel
-        label.setText('Current Key Combinations to paste the resized image: ')
+        label.setText('Shortcut to paste the resized image: ')
 
         # add ctrl/shift/alt
         [label.setText(label.text() + k + '+')
@@ -380,14 +388,16 @@ class Settings(QWidget):
         self.setLayout(mainLayout)
 
         # add widgets to set shortcut
-        self.enableCb = QCheckBox('Automatically resize the image when pasting', self)
+        self.enableCb = QCheckBox('Resize on pasting', self)
+        self.disableUpScalingCb = QCheckBox('Disable upscaling for small images', self)
         self.grabKeyLabel = QLabel('Shortcut to paste the resized image: Ctrl+Shift+V')
-        grabKeyBtn = QPushButton('Grab the key combinations', self)
+        grabKeyBtn = QPushButton('Grab the shortcut', self)
         grabKeyBtn.clicked.connect(self.showGrabKey)
         keyHBox = QHBoxLayout()
         keyHBox.addWidget(self.grabKeyLabel)
         keyHBox.addWidget(grabKeyBtn)
         mainLayout.addWidget(self.enableCb)
+        mainLayout.addWidget(self.disableUpScalingCb)
         mainLayout.addLayout(keyHBox)
 
         # add widgets to set height and width
