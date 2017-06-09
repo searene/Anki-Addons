@@ -389,7 +389,7 @@ class Settings(QWidget):
 
         # add widgets to set shortcut
         self.enableCb = QCheckBox('Resize on pasting', self)
-        self.disableUpScalingCb = QCheckBox('Disable upscaling for small images', self)
+        self.disableUpScalingCb = QCheckBox('Disable upscaling', self)
         self.grabKeyLabel = QLabel('Shortcut to paste the resized image: Ctrl+Shift+V')
         grabKeyBtn = QPushButton('Grab the shortcut', self)
         grabKeyBtn.clicked.connect(self.showGrabKey)
