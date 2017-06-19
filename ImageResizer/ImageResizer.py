@@ -123,10 +123,10 @@ def resize(im):
     logger.debug('image before resizing, width: {}, height: {}'.format(im.width(), im.height()))
     option = Setup.config['ratioKeep']
     isUpScalingDisabled = Setup.config['isUpScalingDisabled']
-    if (option == 'height' or (option == 'either' and im.width() <= im.height())) and ((isUpScalingDisabled and im.height() > Setup.config['height']) or not isUpScalingDisabled):
+    if (option == 'height' or (option == 'either' and im.width() <= im.height())) and ((isUpScalingDisabled and im.height() < Setup.config['height']) or not isUpScalingDisabled):
         logger.debug('scale according to height: {}'.format(Setup.config['height']))
         im = im.scaledToHeight(int(Setup.config['height']), Qt.SmoothTransformation)
-    elif (option == 'width' or (option == 'either' and im.height() < im.width())) and ((isUpScalingDisabled and im.width() > Setup.config['width']) or not isUpScalingDisabled):
+    elif (option == 'width' or (option == 'either' and im.height() < im.width())) and ((isUpScalingDisabled and im.width() < Setup.config['width']) or not isUpScalingDisabled):
         logger.debug('scale according to width: {}'.format(Setup.config['width']))
         im = im.scaledToWidth(int(Setup.config['width']), Qt.SmoothTransformation)
         
