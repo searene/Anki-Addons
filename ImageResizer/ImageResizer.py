@@ -121,14 +121,20 @@ def resize(im):
     """
     logger.debug('resizing images...')
     logger.debug('image before resizing, width: {}, height: {}'.format(im.width(), im.height()))
+
     option = Setup.config['ratioKeep']
     isUpScalingDisabled = Setup.config['isUpScalingDisabled']
-    if (option == 'height' or (option == 'either' and im.width() <= im.height())) and ((isUpScalingDisabled and im.height() < Setup.config['height']) or not isUpScalingDisabled):
-        logger.debug('scale according to height: {}'.format(Setup.config['height']))
-        im = im.scaledToHeight(int(Setup.config['height']), Qt.SmoothTransformation)
-    elif (option == 'width' or (option == 'either' and im.height() < im.width())) and ((isUpScalingDisabled and im.width() < Setup.config['width']) or not isUpScalingDisabled):
-        logger.debug('scale according to width: {}'.format(Setup.config['width']))
-        im = im.scaledToWidth(int(Setup.config['width']), Qt.SmoothTransformation)
+    heightInConfig = int(Setup.config['height'])
+    widthInConfig = int(Setup.config['width'])
+
+    if option == 'height' or option == 'either' and im.width() <= im.height():
+        if im.height() <= heightInConfig and not isUpScalingDisabled or im.height() > heightInConfig:
+            logger.debug('scale according to height: {}'.format(int(Setup.config['height'])))
+            im = im.scaledToHeight(heightInConfig)
+    elif option == 'width' or option == 'either' and im.height() < im.width():
+        if im.width() <= widthInConfig and not isUpScalingDisabled or im.width() > widthInConfig:
+            logger.debug('scale according to width: {}'.format(int(Setup.config['width'])))
+            im = im.scaledToWidth(widthInConfig)
         
     logger.debug('image after resizing, width: {}, height: {}'.format(im.width(), im.height()))
     return im
