@@ -213,7 +213,7 @@ def checkAndResize(mime, editor):
 
         # check suffix
         for suffix in pic:
-            if url.endswith(suffix):
+            if url.lower().endswith(suffix):
                 logger.debug('suffix {} meet requirements'.format(suffix))
 
                 # fetch the image, put it in the mime and return it
