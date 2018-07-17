@@ -95,6 +95,9 @@ class Setup(object):
         action.triggered.connect(self._settings)
         mw.form.menuTools.addAction(action)
 
+        # Setup config button
+        mw.addonManager.setConfigAction('ImageResizer', self._settings)
+
     def setupFunctions(self, imageResizer):
         """Replace functions in anki
         """
@@ -165,8 +168,15 @@ def imageResizer(self, paste = True, mime = None):
 def ImageResizerButton(self):
     shortcut = '+' .join([k for k, v in list(Setup.config['keys'].items()) if v == True])
     shortcut += '+' + Setup.config['keys']['Extra']
-    self._addButton("Image Resizer", lambda s = self: imageResizer(self), _(shortcut), 
-        text="Image Resizer", size=True)
+    # self._addButton("Image Resizer", lambda s = self: imageResizer(self), _(shortcut), 
+    #     text="Image Resizer", size=True)
+
+    # self._addButton(icon = None, label = "Image Resizer", cmd = 'imageResizer(self)')
+    self.addButton(func = lambda s = self: imageResizer(self), 
+        icon = None, label = "Image Resizer", cmd = 'imageResizer(self)', keys = _(shortcut))
+    
+    # self._addButton("Image Resizer", lambda s = self: imageResizer(self), _(shortcut), 
+        # text="Image Resizer", size=True)
 
 def _processMime_around(self, mime, _old):
     """I found that anki dealt with html, urls, text first before dealing with image, I didn't find any advantages of it. If the user wants to copy an image from the web broweser, it will make anki fetch the image again, which is a waste of time. the function will try to deal with image data first if mime contains it"""
@@ -207,6 +217,7 @@ def checkAndResize(mime, editor):
         mime.setImageData(im)
 
     elif mime.hasUrls():
+        logger.debug('found URL in mime')
         url = mime.urls()[0].toString()
 
         # check prefix
