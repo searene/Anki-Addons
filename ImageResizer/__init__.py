@@ -59,7 +59,7 @@ class Setup(object):
     addonDir = mw.pm.addonFolder()
 
     irFolder = os.path.join(addonDir, 'ImageResizer')
-    pickleFile = os.path.join(irFolder, 'config.pickle')
+    pickleFile = os.path.join(irFolder, 'user_files', 'config.pickle')
 
     def __init__(self, imageResizer):
         self.checkConfigAndLoad()
