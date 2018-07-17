@@ -30,7 +30,7 @@ if not os.path.exists(irFolder):
 open(logFile, 'w').close()
 
 # setup logger
-logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s', filename = logFile, level = logging.DEBUG)
+logging.basicConfig(format = '%(asctime)s - %(name)s - %(funcName)s:%(lineno)d - %(levelname)s - %(message)s', filename = logFile, level = logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # settings main window, Qt won't show the window if
@@ -92,14 +92,14 @@ class Setup(object):
         setup menu in anki
         """
         action = QAction("Image Resizer", mw)
-        mw.connect(action, SIGNAL("triggered()"), self._settings)
+        action.triggered.connect(self._settings)
         mw.form.menuTools.addAction(action)
 
     def setupFunctions(self, imageResizer):
         """Replace functions in anki
         """
         # setup button
-        Editor.setupButtons = wrap(Editor.setupButtons, ImageResizerButton, 'after')
+        Editor.setupWeb = wrap(Editor.setupWeb, ImageResizerButton, 'after')
         Editor.imageResizer = imageResizer
 
         EditorWebView._processMime = wrap(EditorWebView._processMime, _processMime_around, 'around')
@@ -108,6 +108,7 @@ class Setup(object):
         """
         Show the settings dialog if the user clicked on the menu
         """
+        logger.debug('triggered settings dialog')
         self.settingsMw = Settings(self, Setup.config)
 
 def resize(im):
@@ -149,6 +150,8 @@ def imageResizer(self, paste = True, mime = None):
     # check if mime contains images or any image file urls
     if mime.hasImage():
         logger.debug('mime contains images relative data in it')
+        logger.debug(mime)
+        logger.debug('paste = {}'.format(paste))
 
         if paste:
             # paste it in the currently focused widget
@@ -424,7 +427,8 @@ class Settings(QWidget):
         self.ratioCb.addItem('scale to height and keep ratio')
         self.ratioCb.addItem('scale to width and keep ratio')
         self.ratioCb.addItem('scale to the maximum dimension and keep ratio')
-        QObject.connect(self.ratioCb, SIGNAL("currentIndexChanged(int)"), self.setLineEditState)
+        # QObject.connect(self.ratioCb, SIGNAL("currentIndexChanged(int)"), self.setLineEditState)
+        self.ratioCb.currentIndexChanged.connect(self.setLineEditState)
 
         sizeLayout = QHBoxLayout()
         sizeLayout.addWidget(widthLable)
