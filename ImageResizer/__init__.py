@@ -150,10 +150,12 @@ def imageResizer(self, paste = True, mime = None):
     # check if mime contains any image related urls, and put the image data in the clipboard if it contains it
     mime = checkAndResize(mime, self)
 
+    logger.debug('imageResizer called!')
+
     # check if mime contains images or any image file urls
     if mime.hasImage():
         logger.debug('mime contains images relative data in it: {}'.format(mime))
-        logger.debug('paste action = {}'.format(paste))
+        logger.debug('paste action: {}'.format(paste))
 
         if paste:
             # paste it in the currently focused widget
@@ -162,9 +164,8 @@ def imageResizer(self, paste = True, mime = None):
             clip.setMimeData(mime, mode = QClipboard.Clipboard)
 
             focusedWidget = QApplication.focusWidget()
-            logger.debug(focusedWidget)
+            # logger.debug(focusedWidget)
             # focusedWidget.paste()
-
             self.onPaste()
 
     return mime
@@ -172,33 +173,31 @@ def imageResizer(self, paste = True, mime = None):
 def ImageResizerButton(self):
     shortcut = '+' .join([k for k, v in list(Setup.config['keys'].items()) if v == True])
     shortcut += '+' + Setup.config['keys']['Extra']
-    # self._addButton("Image Resizer", lambda s = self: imageResizer(self), _(shortcut), 
-    #     text="Image Resizer", size=True)
-
-    # self._addButton(icon = None, label = "Image Resizer", cmd = 'imageResizer(self)')
     self.addButton(func = lambda s = self: imageResizer(self), 
         icon = None, label = "Image Resizer", cmd = 'imageResizer(self)', keys = _(shortcut))
     
-    # self._addButton("Image Resizer", lambda s = self: imageResizer(self), _(shortcut), 
-        # text="Image Resizer", size=True)
 
 def _processMime_around(self, mime, _old):
-    """I found that anki dealt with html, urls, text first before dealing with image, I didn't find any advantages of it. If the user wants to copy an image from the web broweser, it will make anki fetch the image again, which is a waste of time. the function will try to deal with image data first if mime contains it"""
+    """I found that anki dealt with html, urls, text first before dealing with image, 
+    I didn't find any advantages of it. If the user wants to copy an image from the web broweser, 
+    it will make anki fetch the image again, which is a waste of time. the function will try to deal with image data first if mime contains it.contains
 
-    if Setup.config['auto'] == False:
+    This function is always called when pasting!"""
+
+    # "Paste when resizing"
+    if Setup.config['auto'] is False:
         logger.debug("Setup.config['auto'] is False, run the original _processMime directly")
         return _old(self, mime)
 
-    logger.debug('mime before: {}'.format(mime))
-    logger.debug('getting the resized QImage...')
-    mime = self.editor.imageResizer(paste = False, mime = mime)
-    logger.debug('mime after: {}'.format(mime))
-
     if mime.hasImage():
 
+        # Resize the image, then pass to Anki
+        logger.debug('found image in mime data: getting the resized QImage...')
+        mime = self.editor.imageResizer(paste = False, mime = mime)
+
         logger.debug('let anki handle the resized image')
-        # return self._processImage(mime)
         return _old(self, mime)
+        # return self._processImage(mime)
 
     else:
         logger.debug("image data isn't detected, run the old _processMime function")
