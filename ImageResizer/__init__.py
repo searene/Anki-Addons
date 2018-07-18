@@ -152,16 +152,20 @@ def imageResizer(self, paste = True, mime = None):
 
     # check if mime contains images or any image file urls
     if mime.hasImage():
-        logger.debug('mime contains images relative data in it')
-        logger.debug(mime)
-        logger.debug('paste = {}'.format(paste))
+        logger.debug('mime contains images relative data in it: {}'.format(mime))
+        logger.debug('paste action = {}'.format(paste))
 
         if paste:
             # paste it in the currently focused widget
-            logger.debug('paste is True, paste it')
+            logger.debug('paste is True, paste it into current widget')
             clip = self.mw.app.clipboard()
             clip.setMimeData(mime, mode = QClipboard.Clipboard)
-            QApplication.focusWidget().onPaste()
+
+            focusedWidget = QApplication.focusWidget()
+            logger.debug(focusedWidget)
+            # focusedWidget.paste()
+
+            self.onPaste()
 
     return mime
 
@@ -185,13 +189,16 @@ def _processMime_around(self, mime, _old):
         logger.debug("Setup.config['auto'] is False, run the original _processMime directly")
         return _old(self, mime)
 
+    logger.debug('mime before: {}'.format(mime))
     logger.debug('getting the resized QImage...')
     mime = self.editor.imageResizer(paste = False, mime = mime)
+    logger.debug('mime after: {}'.format(mime))
 
     if mime.hasImage():
 
         logger.debug('let anki handle the resized image')
-        return self._processImage(mime)
+        # return self._processImage(mime)
+        return _old(self, mime)
 
     else:
         logger.debug("image data isn't detected, run the old _processMime function")
