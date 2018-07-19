@@ -114,6 +114,10 @@ class Setup(object):
         logger.debug('triggered settings dialog')
         self.settingsMw = Settings(self, Setup.config)
 
+        self.settingsMw.showNormal()
+        self.settingsMw.raise_()
+        self.settingsMw.activateWindow()
+
 def resize(im):
     """Resize the image
     :im: QImage to be resized
@@ -307,9 +311,10 @@ class Settings(QWidget):
     """
     Image Resizer Settings Window
     """
-    def __init__(self, setup, config):
-        super(Settings, self).__init__()
+    def __init__(self, setup, config, parent = None):
+        super(Settings, self).__init__(parent=parent)
 
+        self.parent = parent
         self.setup = setup
         self.pickleFile = Setup.pickleFile
 
@@ -474,9 +479,10 @@ class Settings(QWidget):
 
         # center the window
         self.move(QDesktopWidget().availableGeometry().center() - self.frameGeometry().center())
-
         self.setWindowTitle('Image Resizer Settings')
         self.show()
+        self.raise_()
+        self.activateWindow()
 
     def disableLineEdit(self, lineEdit):
         lineEdit.setReadOnly(True)
