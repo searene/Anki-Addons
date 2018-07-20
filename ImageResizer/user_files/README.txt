@@ -1,0 +1,1 @@
+This directory will hold configuration settings, to persist through ImageResizer upgrades.
