@@ -193,6 +193,10 @@ def _processMime_around(self, mime, _old):
         logger.debug("Setup.config['auto'] is False, run the original _processMime directly")
         return _old(self, mime)
 
+    logger.debug('grabbing MIME data: found formats {}'.format(mime.formats()))
+    logger.debug('hasImage: {}'.format(mime.hasImage()))
+    logger.debug('hasUrls: {}'.format(mime.hasUrls()))
+
     if mime.hasImage():
 
         # Resize the image, then pass to Anki
@@ -203,9 +207,15 @@ def _processMime_around(self, mime, _old):
         return _old(self, mime)
         # return self._processImage(mime)
 
-    else:
-        logger.debug("image data isn't detected, run the old _processMime function")
+    if mime.hasUrls():
+        logger.debug('found URL in mime data: resizing if necessary...')
+        mime = self.editor.imageResizer(paste = False, mime = mime)
+
+        logger.debug('let anki handle the resized image')
         return _old(self, mime)
+    
+    logger.debug("image data isn't detected, run the old _processMime function")
+    return _old(self, mime)
 
 def checkAndResize(mime, editor):
     """check if mime contains url and if the url represents a picture file path, fetch the url and put the image in the clipboard if the url represents an image file
@@ -217,18 +227,18 @@ def checkAndResize(mime, editor):
     :returns: image filled QMimeData if the contained url represents an image file, the original QMimeData otherwise
     """
 
-    logger.debug('checking if url contained in mime is a pic file...')
+    logger.debug('checking if mime data is an image or an URL to an image...')
     pic = ("jpg", "jpeg", "png", "tif", "tiff", "gif", "svg", "webp")
 
     if mime.hasImage():
-        logger.debug('find image in mime, resize and return the mime')
+        logger.debug('found image in mime, resize and return the mime')
         im = resize(mime.imageData())
         mime = QMimeData()
         mime.setImageData(im)
 
     elif mime.hasUrls():
-        logger.debug('found URL in mime')
         url = mime.urls()[0].toString()
+        logger.debug('found URL in mime: {}'.format(url))
 
         # check prefix
         prefix = url[:url.find(':')]
