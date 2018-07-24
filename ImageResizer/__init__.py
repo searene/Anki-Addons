@@ -19,7 +19,8 @@ import urllib.request, urllib.error, urllib.parse
 
 
 # Get log file
-irFolder = os.path.join(mw.pm.addonFolder(), 'ImageResizer')
+# 1214357311 is ImageResizer's addon ID
+irFolder = os.path.join(mw.pm.addonFolder(), '1214357311', 'user_files')
 logFile = os.path.join(irFolder, 'imageResizer.log')
 
 # if ImageResizer's folder doesn't exist, create one
