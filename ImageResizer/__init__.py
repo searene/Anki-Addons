@@ -15,17 +15,19 @@ import logging
 import copy
 import shutil
 import tempfile
+import ssl
 import urllib.request, urllib.error, urllib.parse
 
+addon_id = '1214357311'
+
 # a temporary workaround to solve the CERTIFICATE_VERIFY_FAILED error
-import ssl
 if (not os.environ.get('PYTHONHTTPSVERIFY', '') and
     getattr(ssl, '_create_unverified_context', None)):
     ssl._create_default_https_context = ssl._create_unverified_context
 
 # Get log file
 # 1214357311 is ImageResizer's addon ID
-irFolder = os.path.join(mw.pm.addonFolder(), '1214357311', 'user_files')
+irFolder = os.path.join(mw.pm.addonFolder(), addon_id, 'user_files')
 logFile = os.path.join(irFolder, 'imageResizer.log')
 
 # if ImageResizer's folder doesn't exist, create one
@@ -64,8 +66,7 @@ class Setup(object):
     settingsMw = None
     addonDir = mw.pm.addonFolder()
 
-    # 1214357311 is ImageResizer's addon ID
-    irFolder = os.path.join(addonDir, '1214357311', 'user_files')
+    irFolder = os.path.join(addonDir, addon_id, 'user_files')
     pickleFile = os.path.join(irFolder, 'config.pickle')
 
     def __init__(self, imageResizer):
@@ -103,7 +104,7 @@ class Setup(object):
         mw.form.menuTools.addAction(action)
 
         # Setup config button
-        mw.addonManager.setConfigAction('ImageResizer', self._settings)
+        mw.addonManager.setConfigAction(addon_id, self._settings)
 
     def setupFunctions(self, imageResizer):
         """Replace functions in anki
