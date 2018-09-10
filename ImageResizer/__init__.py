@@ -246,7 +246,6 @@ def checkAndResize(mime, editor):
 
     elif mime.hasUrls():
         url = mime.urls()[0].toString()
-        logger.debug('found URL in mime: {}'.format(url))
 
         # check prefix
         prefix = url[:url.find(':')]

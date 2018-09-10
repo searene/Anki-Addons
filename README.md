@@ -29,10 +29,6 @@ In fact, this addon is only meant to remove the British pronunciation in Longman
 
 Put the respective `.py` file in your Anki addon folder and restart it. Some of these addons are uploaded to [ankiweb](http://ankiweb.net/shared/addons/), you can install them from there directly.
 
-# Known Issues
-
-PurgeAttributes is ridiculously slow on Windows. Haven't found a solution yet.
-
 # License
 
 MIT
