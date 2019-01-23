@@ -1,6 +1,9 @@
 # Anki-Addons
 This repository is used to store all kinds of anki addons that I created
 
+# Looking for a maintainer!
+I no longer have enough time to maintain this repository any more. If anyone is interested in maintaining this repository(especially ImageResizer, which a lot of users are using), you can contact me and continue maintaining this repository(or only ImageResizer, the other three addons are barely used) in my stead.
+
 ## [ImageResizer](http://searene.me/2016/02/14/ImageResizer-an-anki-addon-to-resize-images/)
 
 Resize / Scale the pasted Images in Anki.
