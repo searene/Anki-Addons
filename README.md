@@ -1,6 +1,9 @@
 # Anki-Addons
 This repository is used to store all kinds of anki addons that I created
 
+# Looking for a maintainer!
+I no longer have enough time to maintain this repository any more. If anyone is interested in maintaining this repository(especially ImageResizer, which a lot of users are using), you can contact me and continue maintaining this repository(or only ImageResizer, the other three addons are barely used) in my stead.
+
 ## [ImageResizer](http://searene.me/2016/02/14/ImageResizer-an-anki-addon-to-resize-images/)
 
 Resize / Scale the pasted Images in Anki.
@@ -28,10 +31,6 @@ In fact, this addon is only meant to remove the British pronunciation in Longman
 # How to use it
 
 Put the respective `.py` file in your Anki addon folder and restart it. Some of these addons are uploaded to [ankiweb](http://ankiweb.net/shared/addons/), you can install them from there directly.
-
-# Known Issues
-
-PurgeAttributes is ridiculously slow on Windows. Haven't found a solution yet.
 
 # License
 
