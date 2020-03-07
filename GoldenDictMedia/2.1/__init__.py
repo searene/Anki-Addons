@@ -7,6 +7,7 @@ from aqt.utils import tooltip
 from aqt import dialogs, mw
 
 import re
+import platform
 import os
 import sys
 import copy
@@ -189,10 +190,10 @@ class addNewWindow(QDialog):
         if folder.endswith('/') or folder.endswith('\\'):
             folder = folder[:-1]
 
-        fullPath = os.path.join(self.pathEdit.text(), self.filename)
+        fullPath = self.pathEdit.text() + "/" + self.filename
         if not (os.path.exists(fullPath) and os.path.exists(folder)):
             msg = QMessageBox(self)
-            msg.setText("Folder doesn't exist or doesn't contain the needed media, please select again")
+            msg.setText("Folder doesn't exist or doesn't contain the needed media, please select again: " + fullPath)
             msg.setWindowTitle("Directory selected is not the right one")
             msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
             msg.exec_()
@@ -317,6 +318,12 @@ def urlToLink_around(self, url, _old):
 
     return _old(self, url)
 
+def get_parser():
+    system = platform.system()
+    if system == "Windows":
+        return "html.parser"
+    else:
+        return "lxml"
 
 def importMedia(self, mime, _old):
     """import audios and images from goldendict"""
@@ -336,7 +343,7 @@ def importMedia(self, mime, _old):
         return _old(self, mime)
 
     html = mime.html()
-    soup = BeautifulSoup(html, 'lxml')
+    soup = BeautifulSoup(html, get_parser())
     newMime = QMimeData()
     addressMap = Setup.config['addressMap']
 
