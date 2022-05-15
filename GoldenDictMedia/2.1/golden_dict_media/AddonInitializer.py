@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import aqt
 from anki.hooks import wrap
 from anki.utils import stripHTMLMedia
 from aqt.editor import Editor, EditorWebView
@@ -320,7 +321,7 @@ def urlToLink_around(self, url, _old):
 
 def get_parser():
     system = platform.system()
-    if system == "Windows":
+    if system == "Windows" or system == "darwin":
         return "html.parser"
     else:
         return "lxml"
@@ -412,6 +413,7 @@ def importMedia(self, mime, _old):
     return _old(self, newMime)
 
 
-EditorWebView._processHtml = wrap(EditorWebView._processHtml, importMedia, 'around')
-Editor.urlToLink = wrap(Editor.urlToLink, urlToLink_around, 'around')
-setup = Setup()
+def init_addon():
+    EditorWebView._processHtml = wrap(EditorWebView._processHtml, importMedia, 'around')
+    Editor.urlToLink = wrap(Editor.urlToLink, urlToLink_around, 'around')
+    Setup()
