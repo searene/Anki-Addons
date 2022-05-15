@@ -20,7 +20,7 @@ import platform
 
 def get_parser():
     system = platform.system()
-    if system == "Windows":
+    if system == "Windows" or system == "Darwin":
         return "html.parser"
     else:
         return "lxml"
