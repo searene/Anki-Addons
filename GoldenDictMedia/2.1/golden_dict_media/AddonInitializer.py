@@ -321,7 +321,7 @@ def urlToLink_around(self, url, _old):
 
 def get_parser():
     system = platform.system()
-    if system == "Windows" or system == "darwin":
+    if system == "Windows" or system == "Darwin":
         return "html.parser"
     else:
         return "lxml"
