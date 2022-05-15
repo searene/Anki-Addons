@@ -1,0 +1,1 @@
+Copy the `golden_dict_media` directory to the Anki add-on folder, then restart Anki to take effect.
