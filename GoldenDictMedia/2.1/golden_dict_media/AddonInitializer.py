@@ -95,9 +95,9 @@ class Setup:
             Setup.config = pickle.load(f)
 
 
-class addNewWindow(QDialog):
+class AddNewWindow(QDialog):
     def __init__(self, code, filename):
-        super(addNewWindow, self).__init__()
+        super(AddNewWindow, self).__init__()
 
         # whether current import is sucessful
         self.importRes = None
@@ -299,7 +299,7 @@ def addNewMedia(code, filename):
         return False
 
     # Let's deal with the new media
-    anw = addNewWindow(code, filename)
+    anw = AddNewWindow(code, filename)
     anw.exec_()
 
     # importRes represents whether importation is successful
