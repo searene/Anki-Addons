@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from typing import Optional, Dict
+
 import aqt
 from anki.hooks import wrap
 from anki.utils import stripHTMLMedia
@@ -323,19 +325,51 @@ def get_parser():
     else:
         return "lxml"
 
+
+def get_file_path(link, address_map: Dict[str, str]) -> Optional[str]:
+    if link.get('href'):
+        # audio
+        attr = 'href'
+    elif link.get('src'):
+        # image
+        attr = 'src'
+    else:
+        # something else, I don't know, at least not
+        # something we're looking for, skip
+        return None
+
+    goldenPath = link.get(attr)
+    matchObj = re.search(r'(?<=(gdau|bres)://)[^/\\]*', goldenPath)
+    if not matchObj:
+        return None
+    code = matchObj.group(0)
+    if code not in address_map:
+        # new media
+        filename = os.path.basename(goldenPath)
+        res = addNewMedia(code, filename)
+        if not res:
+            # media import failed, continue to
+            # process the next link
+            return None
+
+    # get the full path of the media file
+    prefix = re.search(r'^(gdau|bres)://[^/\\]*', goldenPath).group(0)
+    return link[attr].replace(prefix, address_map[code])
+
+
 def importMedia(self, mime, _old):
     """import audios and images from goldendict"""
 
     # find out where we are
-    if dialogs._dialogs['AddCards'][1]:
+    if aqt.dialogs._dialogs['AddCards'][1]:
         # we are adding cards
-        window = dialogs._dialogs['AddCards'][1]
-    elif dialogs._dialogs['Browser'][1]:
+        window = aqt.dialogs._dialogs['AddCards'][1]
+    elif aqt.dialogs._dialogs['Browser'][1]:
         # we are browsing cards
-        window = dialogs._dialogs['Browser'][1]
-    elif dialogs._dialogs['EditCurrent'][1]:
+        window = aqt.dialogs._dialogs['Browser'][1]
+    elif aqt.dialogs._dialogs['EditCurrent'][1]:
         # we are editing cards
-        window = dialogs._dialogs['EditCurrent'][1]
+        window = aqt.dialogs._dialogs['EditCurrent'][1]
     else:
         # I don't know where we are, just exit
         return _old(self, mime)
@@ -352,49 +386,22 @@ def importMedia(self, mime, _old):
     links += [link for link in soup.findAll('img') if 'bres' in link['src']]
 
     for link in links:
-        if link.get('href'):
-            # audio
-            attr = 'href'
-        elif link.get('src'):
-            # image
-            attr = 'src'
-        else:
-            # something else, I don't know, at least not
-            # something we're looking for, skip
-            continue
-
-        goldenPath = link.get(attr)
-        matchObj = re.search(r'(?<=(gdau|bres)://)[^/\\]*', goldenPath)
-        if not matchObj:
-            continue
-        code = matchObj.group(0)
-        if code not in addressMap:
-            # new media
-            filename = os.path.basename(goldenPath)
-            res = addNewMedia(code, filename)
-            if not res:
-                # media import failed, continue to
-                # process the next link
-                continue
-
-        # get the full path of the media file
-        prefix = re.search(r'^(gdau|bres)://[^/\\]*', goldenPath).group(0)
-        filePath = link[attr].replace(prefix, addressMap[code])
+        file_path = get_file_path(link, addressMap)
 
         # import the file to anki
-        ankiMedia = window.editor._addMedia(filePath, canDelete=True)
+        anki_media = window.editor._addMedia(file_path, canDelete=True)
         # sound
-        if attr == 'href':
+        if link.get('href'):
             span = link.parent
             # delete the original link,
             # because we don't need it any more
             del link
             # append ankiMedia
-            span.string = ankiMedia
+            span.string = anki_media
 
         # images
         else:
-            img = BeautifulSoup(ankiMedia)
+            img = BeautifulSoup(anki_media)
             link.replaceWith(img)
 
     html = str(soup)
