@@ -5,7 +5,6 @@ from anki.hooks import wrap
 from anki.utils import stripHTMLMedia
 from aqt.editor import Editor, EditorWebView
 from aqt.utils import tooltip
-from aqt import dialogs, mw
 
 import re
 import platform
@@ -47,9 +46,9 @@ class Setup:
         """
         setup menu in anki
         """
-        action = QAction("GoldenDictMedia", mw)
+        action = QAction("GoldenDictMedia", aqt.mw)
         action.triggered.connect(self.openSettingsDialog)
-        mw.form.menuTools.addAction(action)
+        aqt.mw.form.menuTools.addAction(action)
 
     def openSettingsDialog(self):
         self.s = SettingsDialog()
@@ -62,7 +61,7 @@ class Setup:
         """
 
         # GoldenDict folder
-        Setup.gmFolder = os.path.join(mw.pm.addonFolder(), 'GoldenDictMedia')
+        Setup.gmFolder = os.path.join(aqt.mw.pm.addonFolder(), 'GoldenDictMedia')
 
         # if GoldenDictMedia's folder doesn't exist, create one
         if not os.path.exists(Setup.gmFolder):
@@ -217,8 +216,6 @@ class SettingsDialog(QDialog):
         mainLayout = QVBoxLayout()
         self.setLayout(mainLayout)
 
-        print
-        'setupUI, Setup.config: {}'.format(Setup.config)
         self.importedLabel = QLabel("{} dictionaries imported"
                                     .format(len(Setup.config['addressMap'])))
         self.ignoredLabel = QLabel("{} dictionaries ignored"
