@@ -401,7 +401,7 @@ def importMedia(self, mime, _old):
 
         # images
         else:
-            img = BeautifulSoup(anki_media)
+            img = BeautifulSoup(anki_media, get_parser())
             link.replaceWith(img)
 
     html = str(soup)
