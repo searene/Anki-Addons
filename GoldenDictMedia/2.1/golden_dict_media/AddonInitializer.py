@@ -46,8 +46,8 @@ class Setup:
         """
         setup menu in anki
         """
-        action = QAction("GoldenDictMedia", aqt.mw)
-        action.triggered.connect(self.openSettingsDialog)
+        action = aqt.qt.QAction("GoldenDictMedia", aqt.mw)
+        aqt.qt.qconnect(action.triggered, lambda: self.openSettingsDialog())
         aqt.mw.form.menuTools.addAction(action)
 
     def openSettingsDialog(self):
