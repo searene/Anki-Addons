@@ -6,16 +6,12 @@ This addon is used to purge the British pronunciation in longman dictionary. Bec
 
 author: Searene
 """
-
-from anki.hooks import wrap
-from aqt.editor import Editor, EditorWebView
-
-from bs4 import BeautifulSoup
-
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
 import platform
+
+from PyQt6.QtCore import QMimeData
+from aqt import gui_hooks
+from aqt.editor import EditorWebView
+from bs4 import BeautifulSoup
 
 
 def get_parser():
@@ -26,9 +22,7 @@ def get_parser():
         return "lxml"
 
 
-def purgeBrE(self, mime, _old):
-    """purge British pronunciation
-    """
+def get_new_mime(mime: QMimeData):
     html = mime.html()
     soup = BeautifulSoup(html, get_parser())
     audioSpan = soup.findAll('span', attrs={'class': 'dsl_p'})
@@ -40,7 +34,13 @@ def purgeBrE(self, mime, _old):
 
     newMime = QMimeData()
     newMime.setHtml(str(soup))
-    return _old(self, newMime)
+    return newMime
 
 
-EditorWebView._processHtml = wrap(EditorWebView._processHtml, purgeBrE, 'around')
+def init_addon():
+    gui_hooks.editor_will_process_mime.append(will_process_mime_handler)
+
+
+def will_process_mime_handler(mime: QMimeData, editor_web_view: EditorWebView, internal: bool, extended: bool,
+                              drop_event: bool):
+    return get_new_mime(mime)
