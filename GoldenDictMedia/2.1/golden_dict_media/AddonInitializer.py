@@ -3,22 +3,22 @@
 from typing import Optional, Dict
 
 import aqt
+from PyQt6.QtCore import QMimeData
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QCheckBox, QHBoxLayout, QLineEdit, QPushButton, \
+    QMessageBox, QFileDialog
 from anki.hooks import wrap
+from anki.lang import _
 from anki.utils import stripHTMLMedia
 from aqt.editor import Editor, EditorWebView
 from aqt.utils import tooltip
+from aqt import gui_hooks
 
 import re
 import platform
 import os
-import sys
 import copy
 import pickle
 from bs4 import BeautifulSoup
-
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
 
 
 class Setup:
@@ -54,7 +54,7 @@ class Setup:
 
     def openSettingsDialog(self):
         self.s = SettingsDialog()
-        self.s.exec_()
+        self.s.exec()
 
     @classmethod
     def checkConfig(cls):
@@ -139,9 +139,6 @@ class AddNewWindow(QDialog):
         btnLayout.addWidget(cancelButton)
         mainLayout.addLayout(btnLayout)
 
-        # center the window
-        self.move(QDesktopWidget().availableGeometry().center() - self.frameGeometry().center())
-
         self.setWindowTitle('Add New Goldendict Media')
 
     def cancel(self):
@@ -198,7 +195,7 @@ class AddNewWindow(QDialog):
             msg.setText("Folder doesn't exist or doesn't contain the needed media, please select again: " + fullPath)
             msg.setWindowTitle("Directory selected is not the right one")
             msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-            msg.exec_()
+            msg.exec()
             return
 
         Setup.config['addressMap'][self.code] = folder
@@ -241,9 +238,6 @@ class SettingsDialog(QDialog):
         btnLayout.addStretch(1)
         btnLayout.addWidget(resetButton)
         mainLayout.addLayout(btnLayout)
-
-        # center the window
-        self.move(QDesktopWidget().availableGeometry().center() - self.frameGeometry().center())
 
         self.setWindowTitle('GoldenDictMedia Settings')
 
@@ -302,21 +296,11 @@ def addNewMedia(code, filename):
 
     # Let's deal with the new media
     anw = AddNewWindow(code, filename)
-    anw.exec_()
+    anw.exec()
 
     # importRes represents whether importation is successful
     return anw.importRes
 
-
-def urlToLink_around(self, url, _old):
-    pic = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".gif", ".svg", ".webp")
-    ext = os.path.splitext(url)[-1]
-    if (os.path.isabs(url) == False) and (ext in pic):
-        # goldendict's img url is a relative path, which is
-        # already processed, skip it
-        return '<img src={}>'.format(url)
-
-    return _old(self, url)
 
 def get_parser():
     system = platform.system()
@@ -372,11 +356,18 @@ def importMedia(self, mime, _old):
         window = aqt.dialogs._dialogs['EditCurrent'][1]
     else:
         # I don't know where we are, just exit
-        return _old(self, mime)
+        return mime
 
-    html = mime.html()
+    new_mime = get_new_mime(mime, window.editor)
+
+    # default _processHtml method
+    return _old(self, new_mime)
+
+
+def get_new_mime(old_mime: QMimeData, editor: Editor):
+    html = old_mime.html()
     soup = BeautifulSoup(html, get_parser())
-    newMime = QMimeData()
+    new_mime = QMimeData()
     addressMap = Setup.config['addressMap']
 
     # sound
@@ -389,12 +380,12 @@ def importMedia(self, mime, _old):
         file_path = get_file_path(link, addressMap)
 
         # import the file to anki
-        anki_media = window.editor._addMedia(file_path, canDelete=True)
+        anki_media = editor._addMedia(file_path, canDelete=True)
         # sound
         if link.get('href'):
             span = link.parent
             # delete the original link,
-            # because we don't need it any more
+            # because we don't need it anymore
             del link
             # append ankiMedia
             span.string = anki_media
@@ -407,17 +398,19 @@ def importMedia(self, mime, _old):
     html = str(soup)
 
     # assign the modified html to new Mime
-    newMime = QMimeData()
-    newMime.setHtml(html)
+    new_mime = QMimeData()
+    new_mime.setHtml(html)
 
     # set text so the addon is able to work even when StripHTML is on
-    newMime.setText(stripHTMLMedia(html))
-
-    # default _processHtml method
-    return _old(self, newMime)
+    new_mime.setText(stripHTMLMedia(html))
+    return new_mime
 
 
 def init_addon():
-    EditorWebView._processHtml = wrap(EditorWebView._processHtml, importMedia, 'around')
-    Editor.urlToLink = wrap(Editor.urlToLink, urlToLink_around, 'around')
+    gui_hooks.editor_will_process_mime.append(will_process_mime_handler)
     Setup()
+
+
+def will_process_mime_handler(mime: QMimeData, editor_web_view: EditorWebView, internal: bool, extended: bool,
+                              drop_event: bool):
+    return get_new_mime(mime, editor_web_view.editor)

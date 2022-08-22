@@ -1,3 +1,4 @@
-anki==2.1.49
-aqt==2.1.49
-PyQt5==5.15.6
+anki==2.1.54
+aqt==2.1.54
+PyQt6==6.3.1
+PyQt6-WebEngine==6.3.0
