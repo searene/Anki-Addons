@@ -341,33 +341,11 @@ def get_file_path(link, address_map: Dict[str, str]) -> Optional[str]:
     return link[attr].replace(prefix, address_map[code])
 
 
-def importMedia(self, mime, _old):
-    """import audios and images from goldendict"""
-
-    # find out where we are
-    if aqt.dialogs._dialogs['AddCards'][1]:
-        # we are adding cards
-        window = aqt.dialogs._dialogs['AddCards'][1]
-    elif aqt.dialogs._dialogs['Browser'][1]:
-        # we are browsing cards
-        window = aqt.dialogs._dialogs['Browser'][1]
-    elif aqt.dialogs._dialogs['EditCurrent'][1]:
-        # we are editing cards
-        window = aqt.dialogs._dialogs['EditCurrent'][1]
-    else:
-        # I don't know where we are, just exit
-        return mime
-
-    new_mime = get_new_mime(mime, window.editor)
-
-    # default _processHtml method
-    return _old(self, new_mime)
-
-
 def get_new_mime(old_mime: QMimeData, editor: Editor):
+    if old_mime.hasText():
+        return old_mime
     html = old_mime.html()
     soup = BeautifulSoup(html, get_parser())
-    new_mime = QMimeData()
     addressMap = Setup.config['addressMap']
 
     # sound
