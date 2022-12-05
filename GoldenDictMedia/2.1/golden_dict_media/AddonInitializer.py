@@ -343,7 +343,12 @@ def get_file_path(link, address_map: Dict[str, str]) -> Optional[str]:
 
 def get_new_mime(old_mime: QMimeData, editor: Editor):
     if old_mime.hasText():
-        return old_mime
+        new_mime = QMimeData()
+        # replace new lines with <br/>
+        new_text = old_mime.text().replace('\n', '<br/>')
+        new_mime.setHtml("<p>" + new_text + "</p>")
+        new_mime.setText(old_mime.text())
+        return new_mime
     html = old_mime.html()
     soup = BeautifulSoup(html, get_parser())
     addressMap = Setup.config['addressMap']
