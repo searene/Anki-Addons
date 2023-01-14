@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import tempfile
 from typing import Optional, Dict
 
 import aqt
@@ -12,13 +13,16 @@ from anki.utils import stripHTMLMedia
 from aqt.editor import Editor, EditorWebView
 from aqt.utils import tooltip
 from aqt import gui_hooks
+from .mdict_query import IndexBuilder
 
 import re
 import platform
 import os
 import copy
 import pickle
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
+
+resource_file_reader = {}
 
 
 class Setup:
@@ -119,7 +123,7 @@ class AddNewWindow(QDialog):
         pathLabel = QLabel('media path: ')
         self.pathEdit = QLineEdit()
         self.pathBtn = QPushButton('...')
-        self.pathBtn.clicked.connect(self.selectMediaFolder)
+        self.pathBtn.clicked.connect(self.select_media_path)
         hbox.addWidget(pathLabel)
         hbox.addWidget(self.pathEdit)
         hbox.addWidget(self.pathBtn)
@@ -130,7 +134,7 @@ class AddNewWindow(QDialog):
 
         # add OK and Cancel buttons
         okButton = QPushButton("OK")
-        okButton.clicked.connect(self.saveMedia)
+        okButton.clicked.connect(self.save_media)
         cancelButton = QPushButton("Cancel")
         cancelButton.clicked.connect(self.cancel)
         btnLayout = QHBoxLayout()
@@ -156,23 +160,27 @@ class AddNewWindow(QDialog):
             self.pathEdit.setEnabled(True)
             self.pathBtn.setEnabled(True)
 
-    def selectMediaFolder(self):
+    def select_media_path(self):
         lastFolder = Setup.config['lastFolder']
         if not os.path.exists(lastFolder):
             # if lastFolder's no longer existed, open the current folder,
             # which is usually Anki's collection.media
             lastFoder = ''
 
-        path = QFileDialog.getExistingDirectory(self, _("Select the media folder for this dictionary"),
-                                                Setup.config['lastFolder'],
-                                                QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
+        # open a dialog, select a file, and assign the file path to the variable path, the file can be either a folder or a normal file
+
+        dlg = QFileDialog()
+        dlg.setFileMode(QFileDialog.AnyFile)
+        dlg.exec_()
+        path = dlg.selectedFiles()[0]
+
         self.pathEdit.setText(path)
 
         # save the last opened folder, so next time we can find the media more easily
         Setup.config['lastFolder'] = os.path.dirname(path)
         Setup.saveConfigToDisk()
 
-    def saveMedia(self):
+    def save_media(self):
         if self.checkCb.isChecked():
             # ignore the media code
             if self.code not in Setup.config['codesIgnored']:
@@ -183,22 +191,13 @@ class AddNewWindow(QDialog):
                 self.close()
                 return
 
-        folder = self.pathEdit.text().strip()
+        resource_path = self.pathEdit.text().strip()
 
         # remove the trailing / or \
-        if folder.endswith('/') or folder.endswith('\\'):
-            folder = folder[:-1]
+        if resource_path.endswith('/') or resource_path.endswith('\\'):
+            resource_path = resource_path[:-1]
 
-        fullPath = self.pathEdit.text() + "/" + self.filename
-        if not (os.path.exists(fullPath) and os.path.exists(folder)):
-            msg = QMessageBox(self)
-            msg.setText("Folder doesn't exist or doesn't contain the needed media, please select again: " + fullPath)
-            msg.setWindowTitle("Directory selected is not the right one")
-            msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-            msg.exec()
-            return
-
-        Setup.config['addressMap'][self.code] = folder
+        Setup.config['addressMap'][self.code] = resource_path
         Setup.saveConfigToDisk()
         self.importRes = True
         tooltip('Media import completed')
@@ -289,7 +288,7 @@ class SettingsDialog(QDialog):
         self.settingsMw = self
 
 
-def addNewMedia(code, filename):
+def add_new_media(code: str, filename: str) -> bool:
     if code in Setup.config['codesIgnored']:
         # the code should be ignored
         return False
@@ -310,7 +309,7 @@ def get_parser():
         return "lxml"
 
 
-def get_file_path(link, address_map: Dict[str, str]) -> Optional[str]:
+def get_file_path(link: Tag, address_map: Dict[str, str]) -> Optional[str]:
     if link.get('href'):
         # audio
         attr = 'href'
@@ -330,18 +329,35 @@ def get_file_path(link, address_map: Dict[str, str]) -> Optional[str]:
     if code not in address_map:
         # new media
         filename = os.path.basename(goldenPath)
-        res = addNewMedia(code, filename)
-        if not res:
+        success = add_new_media(code, filename)
+        if not success:
             # media import failed, continue to
             # process the next link
             return None
 
     # get the full path of the media file
     prefix = re.search(r'^(gdau|bres)://[^/\\]*', goldenPath).group(0)
-    return link[attr].replace(prefix, address_map[code])
+    if address_map[code].endswith(".mdx"):
+        return get_file_path_from_mdd_file(code, address_map[code], link[attr].replace(prefix, ''))
+    else:
+        return link[attr].replace(prefix, address_map[code])
 
 
-def importMedia(self, mime, _old):
+def get_file_path_from_mdd_file(dict_code: str, mdd_file_path: str, relative_path: str) -> str:
+    """relative_path: starting from /, e.g. /ame_start.wav"""
+    if dict_code not in resource_file_reader:
+        resource_file_reader[dict_code] = IndexBuilder(mdd_file_path, sql_index=True, check=True)
+    index_builder: IndexBuilder = resource_file_reader[dict_code]
+    resource_bytes = index_builder.mdd_lookup(relative_path.replace("/", "\\"))
+    if len(resource_bytes) == 0:
+        raise Exception("Cannot find file: " + relative_path)
+    temp_file_name = tempfile.NamedTemporaryFile(delete=False).name
+    with open(temp_file_name, 'wb') as f:
+        f.write(resource_bytes[0])
+    return temp_file_name
+
+
+def import_media(self, mime, _old):
     """import audios and images from goldendict"""
 
     # find out where we are
@@ -371,10 +387,10 @@ def get_new_mime(old_mime: QMimeData, editor: Editor):
     addressMap = Setup.config['addressMap']
 
     # sound
-    links = [link for link in soup.findAll('a') if 'gdau' in link['href']]
+    links = [link for link in soup.findAll('a', href=True) if 'gdau' in link['href']]
 
     # images
-    links += [link for link in soup.findAll('img') if 'bres' in link['src']]
+    links += [link for link in soup.findAll('img', src=True) if 'bres' in link['src']]
 
     for link in links:
         file_path = get_file_path(link, addressMap)
@@ -383,12 +399,7 @@ def get_new_mime(old_mime: QMimeData, editor: Editor):
         anki_media = editor._addMedia(file_path, canDelete=True)
         # sound
         if link.get('href'):
-            span = link.parent
-            # delete the original link,
-            # because we don't need it anymore
-            del link
-            # append ankiMedia
-            span.string = anki_media
+            link.replaceWith(anki_media)
 
         # images
         else:
