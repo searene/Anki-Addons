@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import tempfile
+from pathlib import Path
 from typing import Optional, Dict
 
 import aqt
@@ -345,13 +346,14 @@ def get_file_path(link: Tag, address_map: Dict[str, str]) -> Optional[str]:
 
 def get_file_path_from_mdd_file(dict_code: str, mdd_file_path: str, relative_path: str) -> str:
     """relative_path: starting from /, e.g. /ame_start.wav"""
+    base_file_name = Path(relative_path).stem
     if dict_code not in resource_file_reader:
         resource_file_reader[dict_code] = IndexBuilder(mdd_file_path, sql_index=True, check=True)
     index_builder: IndexBuilder = resource_file_reader[dict_code]
     resource_bytes = index_builder.mdd_lookup(relative_path.replace("/", "\\"))
     if len(resource_bytes) == 0:
         raise Exception("Cannot find file: " + relative_path)
-    temp_file_name = tempfile.NamedTemporaryFile(delete=False).name
+    temp_file_name = os.path.join(tempfile.gettempdir(), base_file_name)
     with open(temp_file_name, 'wb') as f:
         f.write(resource_bytes[0])
     return temp_file_name
