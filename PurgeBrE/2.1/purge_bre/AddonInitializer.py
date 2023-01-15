@@ -40,7 +40,7 @@ def remove_bre_in_longman5_mdx(soup: BeautifulSoup):
     sound_tags: ResultSet = soup.find_all('span', attrs={'class': 'golden-dict-media-word-sound'})
 
     for sound_tag in sound_tags:
-        if sound_tag.nextSibling is not None and sound_tag.nextSibling['class'] == ['golden-dict-media-word-sound']:
+        if "/media/english/breProns" in sound_tag.get('data-original-href'):
             sound_tag.extract()
             break
 
@@ -82,6 +82,8 @@ def remove_unnecessary_tags_in_longman5_mdx(soup: BeautifulSoup):
 
 def get_new_mime(mime: QMimeData):
     html = mime.html()
+    with open("/tmp/test_anki", "w", encoding="utf8") as f:
+        f.write(html)
     soup = BeautifulSoup(html, get_parser())
     remove_unnecessary_contents_in_longman5(soup)
     remove_unnecessary_tags_in_longman5_mdx(soup)
