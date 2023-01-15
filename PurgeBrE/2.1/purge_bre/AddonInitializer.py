@@ -12,7 +12,7 @@ import re
 from PyQt6.QtCore import QMimeData
 from aqt import gui_hooks
 from aqt.editor import EditorWebView
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, ResultSet
 
 
 def get_parser():
@@ -36,12 +36,15 @@ def remove_unnecessary_contents_in_longman5(soup):
         bre_span.extract()
 
 
-def remove_bre_in_longman5_mdx(soup):
-    sound_tags = soup.find_all('span')
+def remove_bre_in_longman5_mdx(soup: BeautifulSoup):
+    sound_tags: ResultSet = soup.find_all('span', attrs={'class': 'golden-dict-media-word-sound'})
+
     for sound_tag in sound_tags:
-        if not re.match(r'.*\[sound:[^]]+].*', sound_tag.string):
-            return
-        if sound_tag.nextSibling is not None and re.match(r'.*\[sound:[^]]+].*', sound_tag.nextSibling.string):
+        # with open("/tmp/test_anki", "w", encoding="utf8") as f:
+        #     f.write(str(type(sound_tag)))
+        #     f.write("blah")
+        #     f.write(sound_tag.text)
+        if sound_tag.nextSibling is not None and sound_tag.nextSibling['class'] == ['golden-dict-media-word-sound']:
             sound_tag.extract()
             break
 

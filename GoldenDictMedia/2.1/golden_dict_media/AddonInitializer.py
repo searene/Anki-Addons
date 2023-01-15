@@ -403,7 +403,7 @@ def get_new_mime(old_mime: QMimeData, editor: Editor):
         if link.get('href'):
             link.name = 'span'
             # remove all the attributes in link
-            link.attrs = {}
+            link.attrs = {'class': 'golden-dict-media-word-sound'}
             link.append(anki_media)
 
         # images
