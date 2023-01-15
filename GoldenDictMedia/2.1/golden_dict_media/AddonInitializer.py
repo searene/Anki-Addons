@@ -346,7 +346,7 @@ def get_file_path(link: Tag, address_map: Dict[str, str]) -> Optional[str]:
 
 def get_file_path_from_mdd_file(dict_code: str, mdd_file_path: str, relative_path: str) -> str:
     """relative_path: starting from /, e.g. /ame_start.wav"""
-    base_file_name = Path(relative_path).stem
+    base_file_name = os.path.basename(relative_path)
     if dict_code not in resource_file_reader:
         resource_file_reader[dict_code] = IndexBuilder(mdd_file_path, sql_index=True, check=True)
     index_builder: IndexBuilder = resource_file_reader[dict_code]
@@ -398,10 +398,13 @@ def get_new_mime(old_mime: QMimeData, editor: Editor):
         file_path = get_file_path(link, addressMap)
 
         # import the file to anki
-        anki_media = editor._addMedia(file_path, canDelete=True)
+        anki_media: str = editor._addMedia(file_path, canDelete=True)
         # sound
         if link.get('href'):
-            link.replaceWith(anki_media)
+            link.name = 'span'
+            # remove all the attributes in link
+            link.attrs = {}
+            link.append(anki_media)
 
         # images
         else:

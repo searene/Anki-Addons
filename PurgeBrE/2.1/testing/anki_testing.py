@@ -63,6 +63,8 @@ def anki_running():
 
     # don't use the second instance mechanism, start a new instance every time
     def mock_secondInstance(ankiApp):
+
+        # remove the superscript to the right of the word
         return False
 
     AnkiApp.secondInstance = mock_secondInstance

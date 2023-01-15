@@ -23,7 +23,11 @@ def get_parser():
         return "lxml"
 
 
-def remove_longman5_dsl_bre(soup):
+def remove_unnecessary_contents_in_longman5(soup):
+    img = soup.findAll("img", src="qrcx://localhost/icons/playsound.png", alt="Play")
+    if len(img) > 1:
+        img[0].extract()
+
     audio_span = soup.findAll('span', attrs={'class': 'dsl_p'})
     if len(audio_span) > 1 and 'BrE' in audio_span[1].string:
         bre_span = audio_span[1]
@@ -32,20 +36,31 @@ def remove_longman5_dsl_bre(soup):
         bre_span.extract()
 
 
-def remove_unnecessary_tags_in_longman5_mdx(soup):
-    audio_tag = soup.findAll('a', href=re.compile(r'.*las2_br.mp3$'))
-    if len(audio_tag) > 0:
-        audio_tag[0].extract()
+def remove_bre_in_longman5_mdx(soup):
+    sound_tags = soup.find_all('span')
+    for sound_tag in sound_tags:
+        if not re.match(r'.*\[sound:[^]]+].*', sound_tag.string):
+            return
+        if sound_tag.nextSibling is not None and re.match(r'.*\[sound:[^]]+].*', sound_tag.nextSibling.string):
+            sound_tag.extract()
+            break
 
+
+def remove_superscript_next_to_word(soup):
     super_script_span = soup.findAll('span', attrs={'class': 'HOMNUM'})
     if len(super_script_span) > 0:
         super_script_span[0].extract()
 
 
+def remove_unnecessary_tags_in_longman5_mdx(soup):
+    remove_bre_in_longman5_mdx(soup)
+    remove_superscript_next_to_word(soup)
+
+
 def get_new_mime(mime: QMimeData):
     html = mime.html()
     soup = BeautifulSoup(html, get_parser())
-    remove_longman5_dsl_bre(soup)
+    remove_unnecessary_contents_in_longman5(soup)
     remove_unnecessary_tags_in_longman5_mdx(soup)
 
     newMime = QMimeData()
