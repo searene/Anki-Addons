@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QCheckBox, QHBoxLayout
     QMessageBox, QFileDialog
 from anki.hooks import wrap
 from anki.lang import _
-from anki.utils import stripHTMLMedia
+from anki.utils import strip_html_media
 from aqt.editor import Editor, EditorWebView
 from aqt.utils import tooltip
 from aqt import gui_hooks
@@ -171,8 +171,8 @@ class AddNewWindow(QDialog):
         # open a dialog, select a file, and assign the file path to the variable path, the file can be either a folder or a normal file
 
         dlg = QFileDialog()
-        dlg.setFileMode(QFileDialog.AnyFile)
-        dlg.exec_()
+        dlg.setFileMode(QFileDialog.FileMode.AnyFile)
+        dlg.exec()
         path = dlg.selectedFiles()[0]
 
         self.pathEdit.setText(path)
@@ -421,7 +421,7 @@ def get_new_mime(old_mime: QMimeData, editor: Editor):
     new_mime.setHtml(html)
 
     # set text so the addon is able to work even when StripHTML is on
-    new_mime.setText(stripHTMLMedia(html))
+    new_mime.setText(strip_html_media(html))
     return new_mime
 
 

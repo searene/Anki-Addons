@@ -2,3 +2,4 @@ runanki
 tags
 *.pyc
 *.idea
+venv
