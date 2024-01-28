@@ -383,9 +383,10 @@ def import_media(self, mime, _old):
 
 
 def get_new_mime(old_mime: QMimeData, editor: Editor):
+    if not old_mime.hasHtml():
+        return old_mime
     html = old_mime.html()
     soup = BeautifulSoup(html, get_parser())
-    new_mime = QMimeData()
     addressMap = Setup.config['addressMap']
 
     # sound
