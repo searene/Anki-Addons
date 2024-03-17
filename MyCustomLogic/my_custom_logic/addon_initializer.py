@@ -1,12 +1,14 @@
+import subprocess
 from typing import Optional
 
 from anki.utils import strip_html_media
+from aqt.utils import showInfo
 from bs4 import BeautifulSoup, NavigableString
 import re
 
 from aqt.editor import Editor, EditorWebView
-from aqt.gui_hooks import editor_did_paste, editor_will_process_mime
-from aqt import QMimeData
+from aqt.gui_hooks import editor_did_paste, editor_will_process_mime, sync_will_start
+from aqt import QMimeData, mw
 
 
 def has_all_required_fields(editor: Editor) -> bool:
@@ -69,10 +71,43 @@ def will_process_mime_handler(mime: QMimeData, editor_web_view: EditorWebView, i
     return new_mime
 
 
+def convert_audio_files():
+    # Path to your bash script
+    script_path = "/Users/joeygreen/apps/scripts/convert_ogg_to_mp3.sh"
+    try:
+        subprocess.run(["zsh", script_path], check=True)
+        showInfo("Audio files are converted successfully.")
+    except subprocess.CalledProcessError:
+        showInfo("Failed to convert audio files.")
+
+
+def replace_ogg_with_mp3():
+    all_notes = mw.col.find_notes("")
+    updated = 0
+
+    for nid in all_notes:
+        note = mw.col.get_note(nid)
+
+        for fname, fval in note.items():
+            if "[sound:" in fval and ".ogg]" in fval:
+                ogg_file = fval.split('[sound:')[1].split('.ogg]')[0]
+                note[fname] = fval.replace(f"{ogg_file}.ogg", f"{ogg_file}.mp3")
+                mw.col.update_note(note)
+                updated += 1
+
+    showInfo(f"Updated {updated} notes from ogg to mp3.")
+
+
+def sync_will_start_callback():
+    convert_audio_files()
+    replace_ogg_with_mp3()
+
+
 def init_addon():
     # Attach the function to the hook
     editor_did_paste.append(paste_hook)
     editor_will_process_mime.append(will_process_mime_handler)
+    sync_will_start.append(sync_will_start_callback)
 
 
 if __name__ == '__main__':
