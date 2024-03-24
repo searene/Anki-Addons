@@ -11,8 +11,6 @@ from aqt.gui_hooks import editor_did_unfocus_field
 from aqt.sound import play
 from aqt.utils import showInfo
 
-from my_custom_logic.config import microsoft_tts_access_key
-
 
 def get_field_by_name(target_field_name: str, note: Note) -> Optional[FieldDict]:
     """Get the field by name from the note."""
@@ -53,8 +51,14 @@ def fill_sentence_voice_automatically(changed: bool, note: Note, field_idx: int)
 
 def generate_voice(sentence: str) -> Optional[str]:
     """Generate voice using Microsoft's TTS service and save it to Anki's media collection directory."""
+    # Fetch subscription key from the add-on's configuration
+    print("name: " + __name__)
+    config_file = mw.addonManager.getConfig("MyCustomLogic")
+    if config_file is None or config_file["azure_subscription_key"] == "":
+        showInfo("Please set azure_subscription_key in the add-on's configuration.")
+        return None
     headers = {
-        'Ocp-Apim-Subscription-Key': microsoft_tts_access_key,
+        'Ocp-Apim-Subscription-Key': config_file["azure_subscription_key"],
         'Content-Type': 'application/ssml+xml',
         'X-Microsoft-OutputFormat': 'audio-16khz-64kbitrate-mono-mp3',
         'User-Agent': 'Anki Add-on'
