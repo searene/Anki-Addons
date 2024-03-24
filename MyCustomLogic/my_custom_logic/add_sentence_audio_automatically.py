@@ -45,7 +45,10 @@ def fill_sentence_voice_automatically(changed: bool, note: Note, field_idx: int)
             showInfo("Failed to generate voice. Please try again.")
             return
         note.fields[sentence_voice_field['ord']] = f"[sound:{filename}]"
-        editor = aqt.mw.app.activeWindow().editor
+        active_window = aqt.mw.app.activeWindow()
+        if not active_window:
+            return
+        editor = active_window.editor
         editor.loadNote()
 
 
