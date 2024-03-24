@@ -60,7 +60,7 @@ def generate_voice(sentence: str) -> Optional[str]:
     headers = {
         'Ocp-Apim-Subscription-Key': config_file["azure_subscription_key"],
         'Content-Type': 'application/ssml+xml',
-        'X-Microsoft-OutputFormat': 'audio-16khz-64kbitrate-mono-mp3',
+        'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3',
         'User-Agent': 'Anki Add-on'
     }
 
@@ -70,7 +70,13 @@ def generate_voice(sentence: str) -> Optional[str]:
     </voice></speak>
     """
 
-    response = requests.post('https://eastus.tts.speech.microsoft.com/cognitiveservices/v1', headers=headers, data=body)
+    response = requests.post('https://eastus.tts.speech.microsoft.com/cognitiveservices/v1',
+                             headers=headers,
+                             data=body,
+                             proxies={
+                                 "http": "http://127.0.0.1:7890",
+                                 "https": "http://127.0.0.1:7890",
+                             })
 
     if response.status_code == 200:
         # Generate a unique filename for the audio file
@@ -82,6 +88,8 @@ def generate_voice(sentence: str) -> Optional[str]:
 
         play(filename)
         return filename
+    else:
+        print(f"Failed to generate voice, response code: {response.status_code}, response contents: {response.text}")
 
 
 def start():
