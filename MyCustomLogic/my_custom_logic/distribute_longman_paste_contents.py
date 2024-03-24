@@ -1,8 +1,9 @@
 import re
+import warnings
 
 from aqt.editor import Editor
 from aqt.gui_hooks import editor_did_paste
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 
 
 def has_all_required_fields(editor: Editor) -> bool:
@@ -18,7 +19,9 @@ def paste_hook(editor: Editor, html_contents: str, internal: bool, extended: boo
 
 def distribute_pasted_content(editor: Editor, html_contents: str, internal: bool, extended: bool):
     # Match the specific format
-    plain_text = BeautifulSoup(html_contents, "html.parser").get_text()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
+        plain_text = BeautifulSoup(html_contents, "html.parser").get_text()
     match = re.match(r"([^/]+)\s*/(.+?)/\s*\[sound:(.+?)]\s*(.+)", plain_text)
 
     if match and has_all_required_fields(editor):
