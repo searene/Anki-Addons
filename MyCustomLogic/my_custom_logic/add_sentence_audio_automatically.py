@@ -52,7 +52,6 @@ def fill_sentence_voice_automatically(changed: bool, note: Note, field_idx: int)
 def generate_voice(sentence: str) -> Optional[str]:
     """Generate voice using Microsoft's TTS service and save it to Anki's media collection directory."""
     # Fetch subscription key from the add-on's configuration
-    print("name: " + __name__)
     config_file = mw.addonManager.getConfig("MyCustomLogic")
     if config_file is None or config_file["azure_subscription_key"] == "":
         showInfo("Please set azure_subscription_key in the add-on's configuration.")
