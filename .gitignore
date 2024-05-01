@@ -3,3 +3,4 @@ tags
 *.pyc
 *.idea
 venv
+user_files

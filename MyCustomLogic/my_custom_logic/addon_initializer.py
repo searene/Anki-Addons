@@ -3,6 +3,7 @@ from . import convert_audio_file_formats
 from . import distribute_longman_paste_contents
 from . import strip_field_contents
 from . import remove_sound_from_sentence_field
+from . import show_added_sentences_today
 
 
 def init_addon():
@@ -12,6 +13,7 @@ def init_addon():
     convert_audio_file_formats.start()
     add_sentence_audio_automatically.start()
     remove_sound_from_sentence_field.start()
+    show_added_sentences_today.start()
 
 
 if __name__ == '__main__':
