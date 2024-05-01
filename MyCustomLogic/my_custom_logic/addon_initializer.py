@@ -4,6 +4,7 @@ from . import distribute_longman_paste_contents
 from . import strip_field_contents
 from . import remove_sound_from_sentence_field
 from . import show_added_sentences_today
+from . import sentence_experiment
 
 
 def init_addon():
@@ -14,6 +15,7 @@ def init_addon():
     add_sentence_audio_automatically.start()
     remove_sound_from_sentence_field.start()
     show_added_sentences_today.start()
+    sentence_experiment.start()
 
 
 if __name__ == '__main__':
