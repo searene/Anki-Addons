@@ -9,6 +9,7 @@ from aqt.qt import *
 from aqt.utils import showInfo
 from my_custom_logic.common import get_config, get_user_files_folder
 from my_custom_logic.sentence_experiment.distribute_word_ipa_voice import distribute_word_ipa_voice_hook
+from my_custom_logic.sentence_experiment.sentence_generator import SentenceGenerator
 from my_custom_logic.sentence_experiment.trim_official_word_definition import trim_official_word_definition_handler
 
 
@@ -39,7 +40,6 @@ def show_dialog():
     generate_button = QPushButton("Generate")
     progress_text_area = QTextEdit()
     progress_text_area.setReadOnly(True)
-    generate_button.clicked.connect(lambda: generate_sentences(progress_text_area))
     generate_sentences_layout.addWidget(generate_button)
     generate_sentences_layout.addWidget(progress_text_area)
     generate_sentences_tab.setLayout(generate_sentences_layout)
@@ -50,6 +50,12 @@ def show_dialog():
 
     layout.addWidget(tabs)
     dialog.setLayout(layout)
+
+    sentence_generator = SentenceGenerator(answer)
+    sentence_generator.progress_signal.connect(progress_text_area.append)
+    sentence_generator.finished_signal.connect(lambda: progress_text_area.append("Finished"))
+    generate_button.clicked.connect(sentence_generator.start)
+
     dialog.exec()
 
 
@@ -184,7 +190,7 @@ def create_card(word: str, sentence: Optional[str]):
     # note['Sentence'] = generate_sentence(word, sentence)
     # note['Sentence Definition'] = generate_definition(word, note['Sentence'])
 
-    note.model()['did'] = deck_id
+    note.note_type()['did'] = deck_id
     mw.col.addNote(note)
 
 
@@ -257,7 +263,9 @@ def answer(prompt: str) -> str:
     try:
         response = requests.post("http://localhost:11434/api/generate", json=data)
         response.raise_for_status()  # Raise an exception if the status code is not 200
-        return response.json()["response"]
+        res = response.json()["response"]
+        print(f"prompt:\n{prompt}\n\nresponse:\n{res}\n\n")
+        return res
     except requests.RequestException as e:
         return f"Error: {e}"
 
