@@ -5,6 +5,8 @@ from aqt.editor import Editor
 from aqt.gui_hooks import editor_did_paste
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 
+from my_custom_logic.common import strip
+
 
 def is_sentence_experiment_type(editor: Editor) -> bool:
     note_type_name = editor.note.note_type()['name']
@@ -32,18 +34,18 @@ def distribute(editor: Editor, html_contents: str, internal: bool, extended: boo
             return
 
         # Update the "Word" field
-        editor.note.fields[editor.currentField] = word.strip()
+        editor.note.fields[editor.currentField] = strip(word)
 
         # Find and update other fields
         for idx, fld in enumerate(editor.note.note_type()['flds']):
             if fld['name'] == 'Word':
-                editor.note.fields[idx] = f"{word}"
+                editor.note.fields[idx] = f"{strip(word)}"
             elif fld['name'] == "IPA":
-                editor.note.fields[idx] = f"/{ipa}/"
+                editor.note.fields[idx] = f"/{strip(ipa)}/"
             elif fld['name'] == "Voice":
                 editor.note.fields[idx] = f"[sound:{sound}]"
             elif fld['name'] == "Part of Speech":
-                editor.note.fields[idx] = type_info
+                editor.note.fields[idx] = strip(type_info)
 
         # Force update of the editor UI to reflect changes
         editor.loadNote()

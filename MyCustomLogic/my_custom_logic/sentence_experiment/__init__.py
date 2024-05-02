@@ -4,15 +4,16 @@ from typing import List, Optional
 
 import requests
 from aqt import mw
-from aqt.gui_hooks import editor_did_paste
+from aqt.gui_hooks import editor_did_paste, editor_will_process_mime
 from aqt.qt import *
 from aqt.utils import showInfo
 from my_custom_logic.common import get_config, get_user_files_folder
 from my_custom_logic.sentence_experiment.distribute_word_ipa_voice import distribute_word_ipa_voice_hook
+from my_custom_logic.sentence_experiment.trim_official_word_definition import trim_official_word_definition_handler
 
 
 def setup_menu():
-    action = QAction("Generating Sentences with AI", mw)
+    action = QAction("Generate Sentences with AI", mw)
     action.triggered.connect(show_dialog)
     mw.form.menuTools.addAction(action)
 
@@ -20,16 +21,84 @@ def setup_menu():
 def show_dialog():
     dialog = QDialog(mw)
     layout = QVBoxLayout()
+    tabs = QTabWidget()
+
+    # Add Words tab
+    add_words_tab = QWidget()
+    add_words_layout = QVBoxLayout()
     text_area = QTextEdit()
+    add_button = QPushButton("Add")
+    add_button.clicked.connect(lambda: add_words(text_area.toPlainText(), dialog))
+    add_words_layout.addWidget(text_area)
+    add_words_layout.addWidget(add_button)
+    add_words_tab.setLayout(add_words_layout)
+
+    # Generate Sentences tab
+    generate_sentences_tab = QWidget()
+    generate_sentences_layout = QVBoxLayout()
     generate_button = QPushButton("Generate")
-    generate_button.clicked.connect(lambda: prepare_generation(text_area.toPlainText(), dialog))
-    layout.addWidget(text_area)
-    layout.addWidget(generate_button)
+    progress_text_area = QTextEdit()
+    progress_text_area.setReadOnly(True)
+    generate_button.clicked.connect(lambda: generate_sentences(progress_text_area))
+    generate_sentences_layout.addWidget(generate_button)
+    generate_sentences_layout.addWidget(progress_text_area)
+    generate_sentences_tab.setLayout(generate_sentences_layout)
+
+    # Add tabs to the QTabWidget
+    tabs.addTab(add_words_tab, "Add Words")
+    tabs.addTab(generate_sentences_tab, "Generate Sentences")
+
+    layout.addWidget(tabs)
     dialog.setLayout(layout)
     dialog.exec()
 
 
-def prepare_generation(text: str, parent_dialog: QDialog):
+def generate_sentences(progress_text_area: QTextEdit):
+    # Fetch all the cards whose note type is "Sentence Experiment"
+    note_type = mw.col.models.by_name("Sentence Experiment")
+    if not note_type:
+        raise Exception("Cannot find the note type: Sentence Experiment")
+
+    note_ids = mw.col.find_notes(f"mid:{note_type['id']}")
+    total_cards = len(note_ids)
+
+    for index, note_id in enumerate(note_ids, start=1):
+        note = mw.col.get_note(note_id)
+
+        # Prepare the prompt for the answer method
+        word = note['Word']
+        official_word_definition = note['Official Word Definition']
+        reference_paragraph = note['Reference Paragraph']
+
+        prompt = f"""
+        Generate a sentence containing "{word}", the word in the generated sentence should have the following meaning:
+
+        {official_word_definition}
+
+        An example sentence is as follows:
+
+        {reference_paragraph}
+
+        Just generate the sentence, don't add extra explanations. Also, notice that you only need to make sure their meanings are the same, you don't need to make them in the same context or situation.
+        """
+
+        # Call the answer method and fill in the card's "Sentence" field
+        sentence = answer(prompt)
+        sentence = sentence.replace(word, f"<b><u>{word}</u></b>")  # Bolden and underline the word
+        note['Sentence'] = sentence
+
+        # Call the generate_definition method
+        definition = generate_definition(word, sentence)
+        note['Sentence Definition'] = definition
+
+        # Update the note to take effect
+        mw.col.update_note(note)
+
+        # Update the progress text area
+        progress_text_area.append(f"{index} / {total_cards}: Generating the sentence for the word \"{word}\"…")
+
+
+def add_words(text: str, parent_dialog: QDialog):
     words = text.strip().split('\n')
     selection_results = {}
 
@@ -97,7 +166,6 @@ def create_card(word: str, sentence: Optional[str]):
         raise Exception("Cannot find the note type: Sentence Experiment")
 
     note = mw.col.new_note(note_type)
-    print(note.keys())
     note['Word'] = word
     if sentence:
         path = os.path.join(get_user_files_folder(), "A Short History of Nearly Everything.txt")
@@ -112,9 +180,9 @@ def create_card(word: str, sentence: Optional[str]):
         note['Reference Paragraph'] = paragraph
     # note['IPA'] = generate_ipa(word)
     # note['Voice'] = generate_voice(word)
-    if sentence:
-        note['Sentence'] = generate_sentence(word, sentence)
-        note['Definition'] = generate_definition(word, note['Sentence'])
+    # if sentence:
+    # note['Sentence'] = generate_sentence(word, sentence)
+    # note['Sentence Definition'] = generate_definition(word, note['Sentence'])
 
     note.model()['did'] = deck_id
     mw.col.addNote(note)
@@ -196,4 +264,5 @@ def answer(prompt: str) -> str:
 
 def start():
     editor_did_paste.append(distribute_word_ipa_voice_hook)
+    editor_will_process_mime.append(trim_official_word_definition_handler)
     setup_menu()

@@ -41,6 +41,11 @@ def get_field_by_name(target_field_name: str, note: Note) -> Optional[FieldDict]
     return None
 
 
+def strip(s: str) -> str:
+    """Strip the string."""
+    return s.strip().replace("&nbsp;", "")
+
+
 def clean_cloze(text: str) -> str:
     """Remove cloze deletions from the text."""
     # Regex to find all cloze deletions and remove them
