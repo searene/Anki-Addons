@@ -1,11 +1,14 @@
 import hashlib
+import re
 from typing import List, Optional
 
 import requests
 from aqt import mw
+from aqt.gui_hooks import editor_did_paste
 from aqt.qt import *
 from aqt.utils import showInfo
 from my_custom_logic.common import get_config, get_user_files_folder
+from my_custom_logic.sentence_experiment.distribute_word_ipa_voice import distribute_word_ipa_voice_hook
 
 
 def setup_menu():
@@ -49,9 +52,10 @@ def prepare_generation(text: str, parent_dialog: QDialog):
 
 def search_in_file(word: str) -> List[str]:
     path = os.path.join(get_user_files_folder(), "A Short History of Nearly Everything.txt")
-    with open(path, 'r') as file:
+    with open(path, 'r', encoding='utf-8') as file:
         content = file.read()
-    return [s.strip() for s in content.split('.') if word in s]
+    sentences = re.split(r'[.\n]', content)
+    return [s.strip() + "." for s in sentences if re.search(r'\b' + word + r'\b', s)]
 
 
 def choose_sentence(sentences: List[str], word: str) -> str:
@@ -75,18 +79,39 @@ def generate_all_cards(selection_results):
         create_card(word, sentence)
 
 
+def get_paragraph(content: str, sentence: str) -> Optional[str]:
+    paragraphs = content.split('\n')
+    for paragraph in paragraphs:
+        if sentence in paragraph:
+            return paragraph
+    return None
+
+
 def create_card(word: str, sentence: Optional[str]):
     deck_name = "Sentence Experiment Deck"
     deck_id = mw.col.decks.id(deck_name)
     mw.col.decks.select(deck_id)
 
-    note = mw.col.newNote()
-    note.model()['name'] = "Sentence Experiment"
+    note_type = mw.col.models.by_name("Sentence Experiment")
+    if not note_type:
+        raise Exception("Cannot find the note type: Sentence Experiment")
+
+    note = mw.col.new_note(note_type)
+    print(note.keys())
     note['Word'] = word
     if sentence:
-        note['Reference'] = sentence
-    note['IPA'] = generate_ipa(word)
-    note['Voice'] = generate_voice(word)
+        path = os.path.join(get_user_files_folder(), "A Short History of Nearly Everything.txt")
+        with open(path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        paragraph = get_paragraph(content, sentence)
+        if not paragraph:
+            raise Exception("Cannot find the paragraph containing the following sentence: " + sentence)
+        sentence = re.sub(r'\b' + word + r'\b', f"<b><u>{word}</u></b>", sentence)
+        paragraph = re.sub(r'\b' + word + r'\b', f"<b><u>{word}</u></b>", paragraph)
+        note['Reference Sentence'] = sentence
+        note['Reference Paragraph'] = paragraph
+    # note['IPA'] = generate_ipa(word)
+    # note['Voice'] = generate_voice(word)
     if sentence:
         note['Sentence'] = generate_sentence(word, sentence)
         note['Definition'] = generate_definition(word, note['Sentence'])
@@ -104,6 +129,7 @@ def generate_sentence(word: str, context: str) -> str:
     return answer(
         f"Generate a sentence containing \"{word}\", the meaning of the word in the generated sentence should be the same to the meaning of the word in the following sentence:\n\n{context}\n\nJust generate the sentence, don't add extra explanations. Also notice that you only need to make sure their meanings are the same, you don't need to make them in the same context or situation."
     )
+
 
 def generate_ipa(word: str) -> str:
     return answer(f"Generate IPA for \"{word}\", only generate the word, don't add extra explanations.")
@@ -152,6 +178,7 @@ def generate_voice_microsoft(sentence: str) -> str:
 def generate_voice(word: str) -> str:
     return generate_voice_microsoft(word)
 
+
 def answer(prompt: str) -> str:
     data = {
         "model": "llama3",
@@ -167,6 +194,6 @@ def answer(prompt: str) -> str:
         return f"Error: {e}"
 
 
-
 def start():
+    editor_did_paste.append(distribute_word_ipa_voice_hook)
     setup_menu()

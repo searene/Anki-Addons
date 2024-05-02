@@ -22,7 +22,7 @@ def distribute_pasted_content(editor: Editor, html_contents: str, internal: bool
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
         plain_text = BeautifulSoup(html_contents, "html.parser").get_text()
-    match = re.match(r"([^/]+)\s*/(.+?)/\s*\[sound:(.+?)]\s*(.+)", plain_text)
+    match = re.match(r"([^/\d]+)[^/]*/(.+?)/\s*\[sound:(.+?)]\s*([\u25cf\s\w]+)", plain_text)
 
     if match and has_all_required_fields(editor):
         word, ipa, sound, type_info = match.groups()
