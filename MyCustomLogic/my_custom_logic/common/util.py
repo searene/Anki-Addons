@@ -59,3 +59,8 @@ def get_field_contents(field_name: str, note: Note) -> Optional[str]:
     if field is None:
         return None
     return clean_cloze(note.fields[field['ord']])
+
+
+def to_plain_text(html: str) -> str:
+    """Convert the HTML to plain text."""
+    return re.sub(r"<.*?>", "", html)

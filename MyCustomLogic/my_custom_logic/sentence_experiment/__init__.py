@@ -1,4 +1,3 @@
-import hashlib
 import re
 from typing import List, Optional
 
@@ -6,10 +5,11 @@ import requests
 from aqt import mw
 from aqt.gui_hooks import editor_did_paste, editor_will_process_mime
 from aqt.qt import *
-from aqt.utils import showInfo
-from my_custom_logic.common import get_config, get_user_files_folder
+
+from my_custom_logic.common.util import get_user_files_folder
 from my_custom_logic.sentence_experiment.distribute_word_ipa_voice import distribute_word_ipa_voice_hook
 from my_custom_logic.sentence_experiment.sentence_generator import SentenceGenerator
+from my_custom_logic.sentence_experiment.sentence_voice_generator import SentenceVoiceGenerator
 from my_custom_logic.sentence_experiment.trim_official_word_definition import trim_official_word_definition_handler
 
 
@@ -53,10 +53,33 @@ def show_dialog():
 
     sentence_generator = SentenceGenerator(answer)
     sentence_generator.progress_signal.connect(progress_text_area.append)
-    sentence_generator.finished_signal.connect(lambda: progress_text_area.append("Finished"))
+    sentence_generator.finished_signal.connect(lambda: progress_text_area.append("Sentence Generation is Finished"))
+
+    voice_generator = SentenceVoiceGenerator()
+    voice_generator.progress_signal.connect(progress_text_area.append)
+    voice_generator.finished_signal.connect(lambda: progress_text_area.append("Voice Generation is Finished."))
+
+    # Start the SentenceVoiceGenerator when the SentenceGenerator has finished
+    sentence_generator.finished_signal.connect(voice_generator.start)
+
     generate_button.clicked.connect(sentence_generator.start)
 
     dialog.exec()
+
+
+def generate(progress_text_area: QTextEdit, answer: callable, sentence_generator: SentenceGenerator, voice_generator: SentenceVoiceGenerator):
+    sentence_generator = SentenceGenerator(answer)
+    sentence_generator.progress_signal.connect(progress_text_area.append)
+    sentence_generator.finished_signal.connect(lambda: progress_text_area.append("Sentence Generation is Finished"))
+
+    voice_generator = SentenceVoiceGenerator()
+    voice_generator.progress_signal.connect(progress_text_area.append)
+    voice_generator.finished_signal.connect(lambda: progress_text_area.append("Voice Generation is Finished."))
+
+    # Start the SentenceVoiceGenerator when the SentenceGenerator has finished
+    sentence_generator.finished_signal.connect(voice_generator.start)
+
+    sentence_generator.start()
 
 
 def generate_sentences(progress_text_area: QTextEdit):
@@ -207,50 +230,6 @@ def generate_sentence(word: str, context: str) -> str:
 
 def generate_ipa(word: str) -> str:
     return answer(f"Generate IPA for \"{word}\", only generate the word, don't add extra explanations.")
-
-
-def generate_voice_microsoft(sentence: str) -> str:
-    # Fetch subscription key and other necessary configuration details from the add-on's config
-    config = get_config()
-    if "azure_subscription_key" not in config:
-        showInfo("Please set azure_subscription_key in the add-on's configuration.")
-        return ""
-
-    headers = {
-        'Ocp-Apim-Subscription-Key': config["azure_subscription_key"],
-        'Content-Type': 'application/ssml+xml',
-        'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3',
-        'User-Agent': 'Anki Add-on'
-    }
-
-    body = f"""
-    <speak version='1.0' xml:lang='en-US'>
-        <voice xml:lang='en-US' xml:gender='Female' name='en-US-JaneNeural'>{sentence}</voice>
-    </speak>
-    """
-
-    try:
-        response = requests.post('https://eastus.tts.speech.microsoft.com/cognitiveservices/v1', headers=headers,
-                                 data=body)
-        response.raise_for_status()  # Raises stored HTTPError, if one occurred
-
-        # Generate a unique filename for the audio file
-        filename = f"azure-{hashlib.md5(sentence.encode()).hexdigest()}.mp3"
-        filepath = os.path.join(mw.col.media.dir(), filename)
-
-        # Save the audio file to Anki's media collection directory
-        with open(filepath, 'wb') as f:
-            f.write(response.content)
-
-        # Return the Anki compatible reference to the file
-        return f"[sound:{filename}]"
-    except requests.RequestException as e:
-        showInfo(f"Failed to generate voice: {e}")
-        return ""
-
-
-def generate_voice(word: str) -> str:
-    return generate_voice_microsoft(word)
 
 
 def answer(prompt: str) -> str:

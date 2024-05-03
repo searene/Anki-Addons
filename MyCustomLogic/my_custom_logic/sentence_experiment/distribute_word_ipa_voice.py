@@ -2,10 +2,9 @@ import re
 import warnings
 
 from aqt.editor import Editor
-from aqt.gui_hooks import editor_did_paste
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 
-from my_custom_logic.common import strip
+from my_custom_logic.common.util import strip
 
 
 def is_sentence_experiment_type(editor: Editor) -> bool:

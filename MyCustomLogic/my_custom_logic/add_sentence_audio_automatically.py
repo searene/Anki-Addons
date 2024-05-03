@@ -2,7 +2,6 @@ import hashlib
 import os
 from typing import Optional
 
-import aqt
 import requests
 from anki.models import FieldDict
 from anki.notes import Note
@@ -11,7 +10,7 @@ from aqt.gui_hooks import editor_did_unfocus_field
 from aqt.sound import play
 from aqt.utils import showInfo
 
-from my_custom_logic.common import get_config
+from my_custom_logic.common.util import get_config
 
 
 def get_field_by_name(target_field_name: str, note: Note) -> Optional[FieldDict]:
@@ -51,8 +50,6 @@ def fill_sentence_voice_automatically(changed: bool, note: Note, field_idx: int)
             return changed
         note.fields[sentence_voice_field['ord']] = f"[sound:{filename}]"
         return True
-
-
 
 
 def generate_voice(sentence: str) -> Optional[str]:

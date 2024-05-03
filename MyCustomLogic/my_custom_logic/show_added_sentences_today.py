@@ -2,7 +2,7 @@ from aqt import mw
 from aqt.qt import QAction, qconnect
 from aqt.utils import showText
 
-from my_custom_logic.common import get_field_contents
+from my_custom_logic.common.util import get_field_contents
 
 
 def extract_sentences():
