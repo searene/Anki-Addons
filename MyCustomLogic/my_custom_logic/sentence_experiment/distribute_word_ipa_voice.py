@@ -4,7 +4,7 @@ import warnings
 from aqt.editor import Editor
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 
-from my_custom_logic.common.util import strip
+from my_custom_logic.common.util import strip, split
 
 
 def is_sentence_experiment_type(editor: Editor) -> bool:
@@ -17,34 +17,38 @@ def distribute_word_ipa_voice_hook(editor: Editor, html_contents: str, internal:
 
 
 def distribute(editor: Editor, html_contents: str, internal: bool, extended: bool):
+    if not is_sentence_experiment_type(editor):
+        return
+
     # Match the specific format
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
         plain_text = BeautifulSoup(html_contents, "html.parser").get_text()
         print(plain_text)
-    match = re.match(r"([^/\d]+)[^/]*/(.+?)/\s*\[sound:(.+?)]\s*([\u25cf\s\w]+)", plain_text)
 
-    if match and is_sentence_experiment_type(editor):
-        word, ipa, sound, type_info = match.groups()
+    word, ipa, sound, pos = split(plain_text)
 
-        # Check if we are in the "Word" field
-        current_field_name = editor.note.note_type()['flds'][editor.currentField]['name']
-        if current_field_name != "Word":
-            return
+    if ipa == "" and sound == "" and pos == "":
+        return
 
-        # Update the "Word" field
-        editor.note.fields[editor.currentField] = strip(word)
+    # Check if we are in the "Word" field
+    current_field_name = editor.note.note_type()['flds'][editor.currentField]['name']
+    if current_field_name != "Word":
+        return
 
-        # Find and update other fields
-        for idx, fld in enumerate(editor.note.note_type()['flds']):
-            if fld['name'] == 'Word':
-                editor.note.fields[idx] = f"{strip(word)}"
-            elif fld['name'] == "IPA":
-                editor.note.fields[idx] = f"/{strip(ipa)}/"
-            elif fld['name'] == "Voice":
-                editor.note.fields[idx] = f"[sound:{sound}]"
-            elif fld['name'] == "Part of Speech":
-                editor.note.fields[idx] = strip(type_info)
+    # Update the "Word" field
+    editor.note.fields[editor.currentField] = strip(word)
 
-        # Force update of the editor UI to reflect changes
-        editor.loadNote()
+    # Find and update other fields
+    for idx, fld in enumerate(editor.note.note_type()['flds']):
+        if fld['name'] == 'Word':
+            editor.note.fields[idx] = f"{strip(word)}"
+        elif fld['name'] == "IPA":
+            editor.note.fields[idx] = f"/{strip(ipa)}/"
+        elif fld['name'] == "Voice":
+            editor.note.fields[idx] = f"[sound:{sound}]"
+        elif fld['name'] == "Part of Speech":
+            editor.note.fields[idx] = strip(pos)
+
+    # Force update of the editor UI to reflect changes
+    editor.loadNote()

@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from typing import Optional
+from typing import Optional, Tuple
 
 from anki.models import FieldDict
 from anki.notes import Note
@@ -51,6 +51,14 @@ def clean_cloze(text: str) -> str:
     # Regex to find all cloze deletions and remove them
     cleaned_text = re.sub(r"\{\{c[0-9]+::(.*?)}}", r"\1", text)
     return cleaned_text
+
+
+def split(text: str) -> Tuple[str, str, str, str]:
+    match = re.match(r"([^/\d]+)[^/]*/(.+?)/\s*\[sound:(.+?)]\s*([\u25cf\s\w]+)", text)
+    if match:
+        return match.groups()
+    else:
+        return text, "", "", ""
 
 
 def get_field_contents(field_name: str, note: Note) -> Optional[str]:
