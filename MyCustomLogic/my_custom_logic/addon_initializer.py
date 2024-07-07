@@ -1,4 +1,4 @@
-from . import add_sentence_audio_automatically
+from . import add_sentence_audio_automatically, fill_cloze
 from . import convert_audio_file_formats
 from . import distribute_longman_paste_contents
 from . import strip_field_contents
@@ -16,6 +16,7 @@ def init_addon():
     remove_sound_from_sentence_field.start()
     show_added_sentences_today.start()
     sentence_experiment.start()
+    fill_cloze.start()
 
 
 if __name__ == '__main__':

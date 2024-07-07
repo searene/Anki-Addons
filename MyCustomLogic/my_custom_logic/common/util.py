@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 from anki.models import FieldDict
 from anki.notes import Note
@@ -54,11 +54,42 @@ def clean_cloze(text: str) -> str:
 
 
 def split(text: str) -> Tuple[str, str, str, str]:
-    match = re.match(r"([^/\d]+)[^/]*/(.+?)/\s*\[sound:(.+?)]\s*([\u25cf\s\w]+)", text)
+    print(text)
+    match = re.match(r"([^/\d]+)[^/]*(/.+?/)\s*(\[sound:.+?])[\s●○]*(.*?)(?=\[sound:|$)", text)
     if match:
-        return match.groups()
+        word, ipa, sound, pos = match.groups()
+        return word.strip(), ipa.strip(), sound.strip(), pos.strip()
     else:
         return text, "", "", ""
+
+
+def remove_cloze(text: str) -> str:
+    """
+    Remove cloze deletions from the text.
+
+    Examples:
+
+    This is a cup of water. -> This is a cup of water.
+    This is a {{c1::cup}} of water. -> This is a cup of water.
+    This is a {{c1::cup::c}} of water. -> This is a cup of water.
+    This is a {{c1::cup::c}} of {{c2::water}}. -> This is a cup of water.
+    """
+    # Regular expression to match and remove cloze deletions
+    text = re.sub(r'\{\{c\d::(.*?)(::.*?)?\}\}', r'\1', text)
+    return text
+
+
+def get_cloze_contents(text: str) -> List[str]:
+    """
+    Get the cloze contents from the text. Ignore the part after the second "::" in each cloze.
+    """
+    # Find all cloze deletions in the text
+    clozes = re.findall(r'\{\{c\d::(.*?)}}', text)
+
+    # Extract the part before the second "::" in each cloze
+    cloze_contents = [cloze.split('::')[0] for cloze in clozes]
+
+    return cloze_contents
 
 
 def get_field_contents(field_name: str, note: Note) -> Optional[str]:
@@ -66,7 +97,7 @@ def get_field_contents(field_name: str, note: Note) -> Optional[str]:
     field = get_field_by_name(field_name, note)
     if field is None:
         return None
-    return clean_cloze(note.fields[field['ord']])
+    return note.fields[field['ord']]
 
 
 def to_plain_text(html: str) -> str:

@@ -16,9 +16,11 @@ class SentenceVoiceGenerator(QThread):
         note_type = mw.col.models.by_name("Sentence Experiment")
         if not note_type:
             raise Exception("Cannot find the note type: Sentence Experiment")
-        notes = mw.col.find_notes(f"mid:{note_type['id']}")
 
-        note_ids = [note_id for note_id in notes]
+        due_note_ids = mw.col.find_notes("\"note:Sentence Experiment\" prop:due=0")
+        empty_note_ids = [note_id for note_id in mw.col.find_notes("\"note:Sentence Experiment\"") if not mw.col.get_note(note_id)['Sentence Voice'].strip()]
+        note_ids = [*due_note_ids, *empty_note_ids]
+
         total_cards = len(note_ids)
 
         for index, note_id in enumerate(note_ids, start=1):

@@ -37,14 +37,14 @@ def distribute_pasted_content(editor: Editor, html_contents: str, internal: bool
     current_field_name = editor.note.note_type()['flds'][editor.currentField]['name']
     if current_field_name == "Word":
         # Update the "Word" field
-        editor.note.fields[editor.currentField] = word.strip()
+        editor.note.fields[editor.currentField] = word
 
         # Find and update other fields
         for idx, fld in enumerate(editor.note.note_type()['flds']):
             if fld['name'] == "IPA":
-                editor.note.fields[idx] = f"/{ipa}/"
+                editor.note.fields[idx] = ipa
             elif fld['name'] == "Pronunciation":
-                editor.note.fields[idx] = f"[sound:{sound}]"
+                editor.note.fields[idx] = sound
             elif fld['name'] == "Part of Speech":
                 editor.note.fields[idx] = pos
 

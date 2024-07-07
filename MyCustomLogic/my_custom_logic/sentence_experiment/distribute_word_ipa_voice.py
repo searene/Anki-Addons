@@ -42,13 +42,13 @@ def distribute(editor: Editor, html_contents: str, internal: bool, extended: boo
     # Find and update other fields
     for idx, fld in enumerate(editor.note.note_type()['flds']):
         if fld['name'] == 'Word':
-            editor.note.fields[idx] = f"{strip(word)}"
+            editor.note.fields[idx] = word
         elif fld['name'] == "IPA":
-            editor.note.fields[idx] = f"/{strip(ipa)}/"
+            editor.note.fields[idx] = ipa
         elif fld['name'] == "Voice":
-            editor.note.fields[idx] = f"[sound:{sound}]"
+            editor.note.fields[idx] = sound
         elif fld['name'] == "Part of Speech":
-            editor.note.fields[idx] = strip(pos)
+            editor.note.fields[idx] = pos
 
     # Force update of the editor UI to reflect changes
     editor.loadNote()
