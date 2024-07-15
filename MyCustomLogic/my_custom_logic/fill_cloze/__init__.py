@@ -18,9 +18,7 @@ def get_word(editor: Editor) -> Optional[str]:
     if word:
         return word
     sentence = get_field_contents("Sentence", editor.note)
-    print("blah")
-    print(sentence)
-    words = get_cloze_contents(get_field_contents("Sentence", editor.note))
+    words = get_cloze_contents(sentence)
     if not words:
         return None
     return words[0]
@@ -55,7 +53,7 @@ def get_field_contents_dict(word: Word, sentence: str) -> Dict[str, str]:
                 if example.en == sentence:
                     res["Meaning"] = example.zh
                     res['Sentence Voice'] = get_sound(example.audio)
-            res["Word Meaning"] = definition.definition
+                    res["Word Meaning"] = f"<b>{definition.lex_unit if definition.lex_unit is not None else ''}</b> {definition.en} {definition.zh}"
         res["Part of Speech"] = word_entry.pos
         res["IPA"] = word_entry.ipa
         res["Pronunciation"] = get_sound(word_entry.pronunciation)
@@ -69,7 +67,7 @@ def on_generate_cloze_contents_btn_clicked(editor: Editor):
     if not w:
         showInfo("No word is available.")
         return
-    sentence = remove_cloze(get_field_contents("Sentence", editor.note))
+    sentence = remove_cloze(get_field_contents("Sentence", editor.note)).replace("&nbsp;", " ")
     word = fetch_word(w)
     if not word:
         showInfo("Didn't find the word in the dictionary: " + w)
@@ -90,8 +88,6 @@ def on_generate_cloze_contents_btn_clicked(editor: Editor):
 def add_generate_contents_btn(buttons: List[str], editor: Editor) -> List[str]:
     """Add a custom button to the editor's button box."""
     icon_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'res', 'icon.png')
-    print("blah")
-    print(icon_path)
     editor._links['generate-cloze-contents'] = lambda editor: on_generate_cloze_contents_btn_clicked(editor)
     return buttons + [editor._addButton(icon_path,
                                         "generate-cloze-contents",

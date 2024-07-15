@@ -17,7 +17,3 @@ def init_addon():
     show_added_sentences_today.start()
     sentence_experiment.start()
     fill_cloze.start()
-
-
-if __name__ == '__main__':
-    init_addon()

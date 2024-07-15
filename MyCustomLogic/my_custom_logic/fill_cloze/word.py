@@ -11,9 +11,6 @@ class Example:
         self.en = en
         self.zh = zh
 
-    def __str__(self):
-        return f"Example(audio={self.audio}, en={self.en}, zh={self.zh})"
-
     def to_dict(self):
         return {
             "audio": self.audio,
@@ -23,17 +20,15 @@ class Example:
 
 
 class Definition:
-    def __init__(self, definition: str, examples: List[Example]):
-        self.definition = definition
+    def __init__(self, lex_unit: Optional[str], en: str, zh: str, examples: List[Example]):
+        self.lex_unit = lex_unit
+        self.en = en
+        self.zh = zh
         self.examples = examples
-
-    def __str__(self):
-        examples_str = ", ".join(str(example) for example in self.examples)
-        return f"Definition(definition={self.definition}, examples=[{examples_str}])"
 
     def to_dict(self):
         return {
-            "definition": self.definition,
+            "definition": self.en,
             "examples": [example.to_dict() for example in self.examples]
         }
 
@@ -44,10 +39,6 @@ class WordEntry:
         self.pos = part_of_speech
         self.pronunciation = pronunciation
         self.definitions = definitions
-
-    def __str__(self):
-        definitions_str = ", ".join(str(definition) for definition in self.definitions)
-        return f"WordEntry(ipa={self.ipa}, pos={self.pos}, pronunciation={self.pronunciation}, definitions=[{definitions_str}])"
 
     def to_dict(self):
         return {
@@ -62,10 +53,6 @@ class Word:
     def __init__(self, word: str, word_entries: List[WordEntry]):
         self.word = word
         self.word_entries = word_entries
-
-    def __str__(self):
-        word_entries_str = ", ".join(str(entry) for entry in self.word_entries)
-        return f"Word(word={self.word}, word_entries=[{word_entries_str}])"
 
     def to_dict(self):
         return {
@@ -109,7 +96,10 @@ def fetch_word(word: str) -> Optional[Word]:
 
         definitions = []
         for sense_span in entry_div.select('span.entry span.sense'):
-            definition_text = sense_span.select_one('span.def').get_text(strip=True)
+            def_en = sense_span.select_one('span.def').get_text(strip=True)
+            def_zh = sense_span.select_one('span.defcn').get_text(strip=True)
+            lex_unit_tag = sense_span.select_one('span.lexunit')
+            lex_unit = lex_unit_tag.get_text(strip=True) if lex_unit_tag is not None else None
 
             examples = []
             for example_span in sense_span.select('span.example'):
@@ -117,11 +107,11 @@ def fetch_word(word: str) -> Optional[Word]:
                 expcn = example_span.select_one('expcn')
                 if expen and expcn:
                     audio = expen.select_one('a')['href']
-                    en = expen.get_text(strip=True)
-                    zh = expcn.get_text(strip=True)
+                    en = expen.get_text().replace("&nbsp;", " ").strip()
+                    zh = expcn.get_text().replace("&nbsp;", " ").strip()
                     examples.append(Example(audio=audio, en=en, zh=zh))
 
-            definitions.append(Definition(definition=definition_text, examples=examples))
+            definitions.append(Definition(lex_unit=lex_unit, en=def_en, zh=def_zh, examples=examples))
 
         word_entry = WordEntry(
             ipa=ipa,
@@ -152,6 +142,6 @@ def post_process(word: Word) -> None:
 
 
 if __name__ == "__main__":
-    w = fetch_word("test")
+    w = fetch_word("ballot")
     json_str = json.dumps(w.to_dict(), indent=2, ensure_ascii=False)
     print(json_str)
