@@ -55,7 +55,8 @@ def get_field_contents_dict(word: Word, sentence: str) -> Dict[str, str]:
                     res['Sentence Voice'] = get_sound(example.audio)
                     res["Word Meaning"] = f"<b>{definition.lex_unit if definition.lex_unit is not None else ''}</b> {definition.en} {definition.zh}"
         res["Part of Speech"] = word_entry.pos
-        res["IPA"] = word_entry.ipa
+        if word_entry.ipa:
+            res["IPA"] = word_entry.ipa
         res["Pronunciation"] = get_sound(word_entry.pronunciation)
     return res
 
