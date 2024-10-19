@@ -66,7 +66,7 @@ def on_generate_cloze_contents(editor: Editor):
     if not w:
         showInfo("No word is available.")
         return
-    sentence = remove_cloze(get_field_contents("Sentence", editor.note)).replace("&nbsp;", " ")
+    sentence = remove_cloze(get_field_contents("Sentence", editor.note)).replace("&nbsp;", " ").replace('’', '\'')
     word = fetch_word(w)
     if not word:
         showInfo("Didn't find the word in the dictionary: " + w)
