@@ -106,7 +106,11 @@ def fetch_word(word: str) -> Optional[Word]:
                 expen = example_span.select_one('expen')
                 expcn = example_span.select_one('expcn')
                 if expen and expcn:
-                    audio = expen.select_one('a')['href']
+                    audio_link = expen.select_one('a')
+                    if audio_link is None:
+                        # Some examples don't have audios, those examples are not what we are looking for.
+                        continue
+                    audio = audio_link['href']
                     en = expen.get_text().replace("&nbsp;", " ").strip()
                     zh = expcn.get_text().replace("&nbsp;", " ").strip()
                     examples.append(Example(audio=audio, en=en, zh=zh))
